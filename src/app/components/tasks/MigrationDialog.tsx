@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useTasksStore } from '@/store/tasksStore';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { testSupabaseConnection } from '@/lib/supabase';
 import { AlertCircle } from 'lucide-react';

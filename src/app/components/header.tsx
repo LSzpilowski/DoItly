@@ -1,6 +1,3 @@
-'use client';
-
-import React from "react";
 import { useAuthStore } from "@/store/authStore";
 import { AuthSheet } from "./auth/AuthSheet";
 import { AccountSheet } from "./auth/AccountSheet";

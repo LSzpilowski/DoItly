@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { AuthComponent } from './AuthComponent';
@@ -17,7 +15,6 @@ export function AuthSheet() {
   const [open, setOpen] = useState(false);
   const { user } = useAuthStore();
 
-  // Close sheet after successful login
   if (user && open) {
     setOpen(false);
   }
