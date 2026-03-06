@@ -26,11 +26,11 @@ export type UserStats = {
   completionRate: number;
   activeVsCompletedRatio: number;
   
-  averageCompletionTime?: number;
   monthlyTasksCreated?: Record<string, number>;
   monthlyTasksCompleted?: Record<string, number>;
   templatesUsedCount?: number;
   recentlyDeletedCount?: number;
+  currentMonth?: string;
 };
 
 interface TasksState {
@@ -58,14 +58,11 @@ interface TasksState {
   useTemplate: (templateId: string, userId?: string) => Promise<void>;
   removeTemplate: (templateId: string, userId?: string) => Promise<void>;
   
-  // Load tasks
   loadTasks: (userId?: string) => Promise<void>;
   
-  // Clear all (for logout)
   clearTasks: () => void;
 }
 
-// Helper functions for localStorage
 const STORAGE_KEY = 'doitly_tasks_v2';
 
 const getLocalTasks = (): Task[] => {
@@ -80,7 +77,6 @@ const saveLocalTasks = (tasks: Task[]) => {
   }
 };
 
-// Calculate stats helper
 const calculateStats = (tasks: Task[]): UserStats => {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -93,33 +89,30 @@ const calculateStats = (tasks: Task[]): UserStats => {
   const deleted = nonTemplates.filter(t => t.status === 'deleted');
   const archived = nonTemplates.filter(t => t.status === 'archived');
   
+  const allDone = completed.length + archived.length;
   const totalCreated = nonTemplates.length;
-  const completionRate = totalCreated > 0 ? completed.length / totalCreated : 0;
-  const activeVsCompletedRatio = completed.length > 0 ? active.length / completed.length : 0;
-  
-  // Calculate average completion time
-  const completedWithTime = completed.filter(t => t.completedAt);
-  let averageCompletionTime: number | undefined;
-  if (completedWithTime.length > 0) {
-    const totalTime = completedWithTime.reduce((sum, task) => {
-      const created = new Date(task.createdAt).getTime();
-      const completedTime = new Date(task.completedAt!).getTime();
-      return sum + (completedTime - created);
-    }, 0);
-    averageCompletionTime = totalTime / completedWithTime.length / (1000 * 60 * 60); // in hours
-  }
-  
+  const meaningfulTotal = active.length + allDone;
+  const completionRate = meaningfulTotal > 0 ? allDone / meaningfulTotal : 0;
+  const activeVsCompletedRatio = allDone > 0 ? active.length / allDone : 0;
+
   // Monthly stats
   const monthlyTasksCreated: Record<string, number> = {};
   const monthlyTasksCompleted: Record<string, number> = {};
   
   nonTemplates.forEach(task => {
     const month = task.createdAt.substring(0, 7); // YYYY-MM
-    monthlyTasksCreated[month] = (monthlyTasksCreated[month] || 0) + 1;
+    if (task.status !== 'deleted') {
+      // Only count non-deleted tasks as "created" for monthly stats
+      monthlyTasksCreated[month] = (monthlyTasksCreated[month] || 0) + 1;
+    }
     
+    // Count both completed and archived as "done" for monthly completed stats
     if (task.status === 'completed' && task.completedAt) {
       const completedMonth = task.completedAt.substring(0, 7);
       monthlyTasksCompleted[completedMonth] = (monthlyTasksCompleted[completedMonth] || 0) + 1;
+    } else if (task.status === 'archived' && task.archivedAt) {
+      const archivedMonth = task.archivedAt.substring(0, 7);
+      monthlyTasksCompleted[archivedMonth] = (monthlyTasksCompleted[archivedMonth] || 0) + 1;
     }
   });
   
@@ -129,16 +122,16 @@ const calculateStats = (tasks: Task[]): UserStats => {
   return {
     totalTasksCreated: totalCreated,
     activeTasksCount: active.length,
-    completedTasksCount: completed.length,
+    completedTasksCount: allDone,
     deletedTasksCount: deleted.length,
     archivedTasksCount: archived.length,
     templatesCount: templates.length,
     completionRate,
     activeVsCompletedRatio,
-    averageCompletionTime,
     monthlyTasksCreated,
     monthlyTasksCompleted,
     recentlyDeletedCount,
+    currentMonth,
   };
 };
 

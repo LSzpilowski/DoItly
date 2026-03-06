@@ -1,11 +1,9 @@
-import { JetBrains_Mono, Montserrat } from "next/font/google";
+export const fontSans = {
+  className: "font-sans",
+  variable: "--font-sans",
+};
 
-export const fontSans = Montserrat({
-    subsets: ["latin"],
-    variable: "--font-sans",
-});
-
-export const fontMono = JetBrains_Mono({
-    subsets: ["latin"],
-    variable: "--font-mono",
-});
+export const fontMono = {
+  className: "font-mono",
+  variable: "--font-mono",
+};

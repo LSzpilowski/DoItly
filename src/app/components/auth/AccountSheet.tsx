@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { User, TrendingUp, CheckCircle, ListTodo, Archive, FileText, Calendar, LogOut, Trash2, Download } from "lucide-react";
 import {
   Sheet,
@@ -127,11 +126,12 @@ export const AccountSheet: React.FC = () => {
             <CardHeader className="py-3">
               <div className="flex items-center gap-3">
                 {user.user_metadata?.avatar_url ? (
-                  <Image 
-                    src={user.user_metadata.avatar_url} 
-                    alt="Avatar" 
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="Avatar"
                     width={64}
                     height={64}
+                    referrerPolicy="no-referrer"
                     className="w-16 h-16 rounded-full"
                   />
                 ) : (
@@ -161,12 +161,10 @@ export const AccountSheet: React.FC = () => {
             </CardHeader>
           </Card>
 
-          {/* Statistics */}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold">Your Statistics</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Total Tasks Created */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -179,7 +177,6 @@ export const AccountSheet: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Active Tasks */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -192,7 +189,6 @@ export const AccountSheet: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Completed Tasks */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -205,20 +201,18 @@ export const AccountSheet: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Completion Rate */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Completion Rate</p>
-                      <p className="text-3xl font-bold text-purple-600">{stats.completionRate.toFixed(0)}%</p>
+                      <p className="text-3xl font-bold text-purple-600">{(stats.completionRate * 100).toFixed(0)}%</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-purple-600 opacity-80" />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Archived Tasks */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -231,7 +225,6 @@ export const AccountSheet: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Templates */}
               <Card className="border-2 hover:shadow-md transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -244,22 +237,6 @@ export const AccountSheet: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Average Completion Time */}
-            {stats.averageCompletionTime && (
-              <Card className="border-2">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Average Completion Time</p>
-                      <p className="text-2xl font-bold mt-1">
-                        {Math.round(stats.averageCompletionTime / (1000 * 60 * 60))} hours
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Monthly/Yearly Stats */}
             {stats.monthlyTasksCreated && Object.keys(stats.monthlyTasksCreated).length > 0 && (
@@ -290,14 +267,14 @@ export const AccountSheet: React.FC = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Created</p>
                         <p className="text-2xl font-bold">
-                          {(Object.values(stats.monthlyTasksCreated)[0] as number) || 0}
+                          {stats.currentMonth ? (stats.monthlyTasksCreated[stats.currentMonth] ?? 0) : 0}
                         </p>
                       </div>
                       {stats.monthlyTasksCompleted && (
                         <div>
                           <p className="text-sm text-muted-foreground">Completed</p>
                           <p className="text-2xl font-bold">
-                            {(Object.values(stats.monthlyTasksCompleted)[0] as number) || 0}
+                            {stats.currentMonth ? (stats.monthlyTasksCompleted[stats.currentMonth] ?? 0) : 0}
                           </p>
                         </div>
                       )}
