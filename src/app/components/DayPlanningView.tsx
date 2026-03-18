@@ -4,6 +4,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -105,7 +106,7 @@ const TaskCard = ({ task, dragging, onRemove, showRemove }: TaskCardProps) => {
       {showRemove && onRemove && (
         <button
           onClick={onRemove}
-          className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all cursor-pointer"
+          className="flex-shrink-0 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all cursor-pointer opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
           aria-label="Remove from today"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +125,7 @@ const DraggableTaskCard = ({ task }: { task: Task }) => {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="cursor-grab active:cursor-grabbing"
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
     >
       <TaskCard task={task} dragging={isDragging} />
     </div>
@@ -209,7 +210,8 @@ export const DayPlanningView = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
   );
 
   // Scope to active workspace

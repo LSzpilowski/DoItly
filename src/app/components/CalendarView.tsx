@@ -4,6 +4,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -108,7 +109,7 @@ const Chip = ({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`flex items-center gap-1 text-[11px] rounded px-1.5 py-0.5 truncate max-w-full group cursor-grab active:cursor-grabbing transition-opacity border ${
+      className={`flex items-center gap-1 text-[11px] rounded px-1.5 py-0.5 truncate max-w-full group cursor-grab active:cursor-grabbing transition-opacity border touch-none select-none ${
         isDragging ? "opacity-30" : ""
       } ${palette.bg} ${palette.text} ${palette.border}`}
     >
@@ -116,7 +117,7 @@ const Chip = ({
       {onClear && (
         <button
           onClick={(e) => { e.stopPropagation(); onClear(); }}
-          className={`opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hover:opacity-80 hover:cursor-pointer`}
+          className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity flex-shrink-0 hover:opacity-80 hover:cursor-pointer"
         >
           ×
         </button>
@@ -133,7 +134,7 @@ const DraggableTaskRow = ({ task }: { task: Task }) => {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border text-sm cursor-grab active:cursor-grabbing transition-opacity ${
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border text-sm cursor-grab active:cursor-grabbing transition-opacity touch-none select-none ${
         isDragging ? "opacity-30" : "hover:bg-accent"
       }`}
     >
@@ -202,7 +203,8 @@ export const CalendarView = () => {
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
   );
 
   const monthGrid = useMemo(() => getMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);

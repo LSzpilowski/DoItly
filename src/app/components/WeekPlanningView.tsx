@@ -4,6 +4,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -68,7 +69,7 @@ const MiniCard = ({ task, dragging, onRemove }: MiniCardProps) => (
     {onRemove && (
       <button
         onClick={onRemove}
-        className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all cursor-pointer"
+        className="flex-shrink-0 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all cursor-pointer opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         aria-label="Remove"
       >
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +83,7 @@ const MiniCard = ({ task, dragging, onRemove }: MiniCardProps) => (
 const DraggableMiniCard = ({ task, onRemove }: { task: Task; onRemove?: () => void }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
+    <div ref={setNodeRef} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing touch-none select-none">
       <MiniCard task={task} dragging={isDragging} onRemove={onRemove} />
     </div>
   );
@@ -168,7 +169,8 @@ export const WeekPlanningView = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
   );
 
   const weekDays = useMemo(() => getWeekDays(), []);
