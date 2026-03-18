@@ -1,4 +1,4 @@
-import { ThemeProvider } from "./theme-provider";
+import { ThemeProvider } from "next-themes";
 
 interface ProvidersProps {
   children: React.ReactNode;
