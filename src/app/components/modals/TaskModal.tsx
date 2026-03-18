@@ -1,23 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { useTasksStore } from "@/store/tasksStore";
 import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
-import { useEffect } from "react";
 import type { Priority, Repeat, TaskFormState, Subtask } from "@/store/types";
 
 const PRIORITIES: Priority[] = ["low", "medium", "high"];
@@ -35,44 +19,16 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   high: "text-red-600 dark:text-red-400",
 };
 
-// ─── SortableSubtaskItem ─────────────────────────────────────────────────────
-interface SortableSubtaskProps {
+// ─── SubtaskItem (no drag-and-drop — dnd-kit available from LS-12.1) ─────────
+interface SubtaskItemProps {
   subtask: Subtask;
   onToggle: () => void;
   onRemove: () => void;
 }
 
-const SortableSubtaskItem = ({ subtask, onToggle, onRemove }: SortableSubtaskProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: subtask.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
+const SubtaskItem = ({ subtask, onToggle, onRemove }: SubtaskItemProps) => {
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg group"
-    >
-      {/* Drag handle */}
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="p-0.5 opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted-foreground cursor-grab active:cursor-grabbing transition-opacity flex-shrink-0"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
-          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
-        </svg>
-      </button>
+    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg group">
       <input
         type="checkbox"
         checked={subtask.completed}
@@ -119,18 +75,6 @@ const TaskModalInner = ({
   const [tagInput, setTagInput] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const titleRef = useRef<HTMLInputElement>(null);
-
-  const subtaskSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
-
-  const handleSubtaskDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIdx = form.subtasks.findIndex((s) => s.id === active.id);
-    const newIdx = form.subtasks.findIndex((s) => s.id === over.id);
-    setForm((f) => ({ ...f, subtasks: arrayMove(f.subtasks, oldIdx, newIdx) }));
-  };
 
   // Auto-focus title on mount
   useEffect(() => {
@@ -447,27 +391,16 @@ const TaskModalInner = ({
               </button>
             </div>
             {form.subtasks.length > 0 && (
-              <DndContext
-                sensors={subtaskSensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleSubtaskDragEnd}
-              >
-                <SortableContext
-                  items={form.subtasks.map((s) => s.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-1">
-                    {form.subtasks.map((st, idx) => (
-                      <SortableSubtaskItem
-                        key={st.id}
-                        subtask={st}
-                        onToggle={() => toggleSubtask(idx)}
-                        onRemove={() => removeSubtask(idx)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+              <div className="space-y-1">
+                {form.subtasks.map((st, idx) => (
+                  <SubtaskItem
+                    key={st.id}
+                    subtask={st}
+                    onToggle={() => toggleSubtask(idx)}
+                    onRemove={() => removeSubtask(idx)}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
@@ -548,7 +481,7 @@ export const TaskModal = () => {
         description: prefillSource.description ?? "",
         dueDate: prefillSource.dueDate ?? "",
         priority: prefillSource.priority ?? "medium",
-        workspace: prefillSource.workspace ?? (workspaces[0]?.name ?? ""),
+        workspace: prefillSource.workspace ?? activeWorkspaceName,
         category: prefillSource.category ?? (categories[0]?.name ?? ""),
         repeat: prefillSource.repeat ?? "none",
         tags: prefillSource.tags ? prefillSource.tags.join(", ") : "",
@@ -602,7 +535,7 @@ export const TaskModal = () => {
       onSubmit={handleSubmit}
       onClose={closeAllModals}
       categories={categories}
-      workspaces={workspaces}
+      workspaces={[]}
     />
   );
 };
