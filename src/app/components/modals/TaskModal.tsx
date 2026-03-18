@@ -278,12 +278,26 @@ const TaskModalInner = ({
           {/* Due Date */}
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Due Date</label>
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => setField("dueDate", e.target.value)}
-              className={`w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.dueDate ? "border-red-500" : "border-input"}`}
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setField("dueDate", e.target.value)}
+                className={`w-full max-w-[180px] px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.dueDate ? "border-red-500" : "border-input"}`}
+              />
+              {form.dueDate && (
+                <button
+                  type="button"
+                  onClick={() => setField("dueDate", "")}
+                  className="flex-shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                  aria-label="Clear due date"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
             {errors.dueDate && <p className="text-xs text-red-500 mt-1">{errors.dueDate}</p>}
           </div>
 
