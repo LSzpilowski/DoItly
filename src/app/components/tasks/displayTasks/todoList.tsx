@@ -79,7 +79,7 @@ export const TodosList: React.FC<ITodosList> = ({
 
 
   return (
-    <Card className="w-full md:w-1/2 flex flex-col min-h-65 max-h-65 md:min-h-96 md:min-h-110 md:max-h-110 shadow-md border-2 transition-all hover:shadow-lg bg-gradient-to-br from-gray-900 to-black">
+    <Card className="w-full md:w-1/2 flex flex-col min-h-65 max-h-65 md:min-h-96 md:min-h-110 md:max-h-110 shadow-md border-2 transition-all hover:shadow-lg bg-white">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl md:text-2xl font-semibold flex items-center gap-2">
           <ListTodo className="h-6 w-6 text-blue-600 dark:text-blue-400" />
