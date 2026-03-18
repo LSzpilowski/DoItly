@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/app/theme-provider";
 import { AuthProvider } from "@/app/components/auth/AuthProvider";
 import { TasksProvider } from "@/app/components/tasks/TasksProvider";
 import { SignInReminder } from "@/app/components/tasks/MigrationDialog";
@@ -52,7 +51,6 @@ class ErrorBoundary extends React.Component<
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ThemeProvider attribute="class" defaultTheme="system">
         <BrowserRouter>
           <AuthProvider>
             <TasksProvider>
@@ -66,7 +64,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             </TasksProvider>
           </AuthProvider>
         </BrowserRouter>
-      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
