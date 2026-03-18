@@ -21,25 +21,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface ITask {
-  id: string;
-  text: string;
-  isChecked: boolean;
-}
+import type { Task } from "@/store/tasksStore";
 
 interface ITasksHistory {
-  latestHistoryTasks: ITask[];
+  latestHistoryTasks: Task[];
   handleClearHistory: () => void;
-  handleReUseButton: (index: number) => void;
+  handleReUseButton: (task: Task) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const TasksHistory: React.FC<ITasksHistory> = ({
   latestHistoryTasks,
   handleClearHistory,
   handleReUseButton,
+  open: controlledOpen,
+  onOpenChange,
 }) => {
   const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const effectiveOpen = controlledOpen !== undefined ? controlledOpen : isOpen;
+  const handleOpenChange = (val: boolean) => {
+    setIsOpen(val);
+    onOpenChange?.(val);
+  };
   const [message, setMessage] = useState({
     subtitle: "",
   });
@@ -68,20 +74,24 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
     });
   }, []);
 
+  const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="lg" className="gap-2" aria-label="Open task history">
-          <History className="h-5 w-5" />
-          History
-          {mounted && latestHistoryTasks.length > 0 && (
-            <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
-              {latestHistoryTasks.length}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="max-h-screen w-full sm:max-w-lg bg-gradient-to-br from-black to-gray-900">
+    <Sheet open={effectiveOpen} onOpenChange={handleOpenChange}>
+      {!isControlled && (
+        <SheetTrigger asChild>
+          <Button variant="outline" size="lg" className="gap-2" aria-label="Open task history">
+            <History className="h-5 w-5" />
+            History
+            {mounted && latestHistoryTasks.length > 0 && (
+              <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                {latestHistoryTasks.length}
+              </span>
+            )}
+          </Button>
+        </SheetTrigger>
+      )}
+      <SheetContent className="w-full sm:max-w-lg bg-background overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Task History</SheetTitle>
           <SheetDescription>
@@ -91,7 +101,7 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
             Showing last 10 deleted tasks
           </p>
         </SheetHeader>
-        <Card className="flex flex-col h-full border-0 shadow-none mt-6">
+        <Card className="flex flex-col border-0 shadow-none bg-transparent mt-6">
           {latestHistoryTasks.length > 0 && (
             <CardHeader className="px-0 pt-0">
               <CardTitle className="flex flex-col items-center justify-between gap-4">
@@ -100,13 +110,13 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full bg-white text-black hover:bg-red-600/50 hover:text-white transition-colors duration-300 ease-in-out"
+                      className="w-full bg-primary text-primary-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors duration-300 ease-in-out"
                       aria-label="Clear all task history"
                     >
                       Clear All History
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-gradient-to-br from-black to-gray-900 text-white hover:bg-black/90 z-9999">
+                  <AlertDialogContent className="bg-background z-9999">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Clear All History?</AlertDialogTitle>
                       <AlertDialogDescription>
@@ -114,10 +124,10 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel className="hover:opacity-80" >Cancel</AlertDialogCancel>
+                      <AlertDialogCancel className="hover:bg-accent" >Cancel</AlertDialogCancel>
                       <AlertDialogAction 
                         onClick={handleClearHistory}
-                        className="bg-white text-black hover:bg-red-600/50 hover:text-white"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
                       >
                         Clear All
                       </AlertDialogAction>
@@ -128,15 +138,27 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
             </CardHeader>
           )}
           {latestHistoryTasks.length > 0 ? (
-             <CardContent className="px-0 overflow-y-auto">
+             <CardContent className="px-0">
             {latestHistoryTasks.length > 0 && (
               <ul className="flex flex-col gap-2">
-                {latestHistoryTasks.map((task, index) => (
-                  <Card key={index} className="group transition-all hover:shadow-md hover:bg-black/10 dark:hover:bg-white/10 border-2">
+                {latestHistoryTasks.map((task) => (
+                  <Card key={task.id} className="group transition-all hover:shadow-md hover:bg-accent border-2">
                     <div className="py-3 px-4 text-base flex justify-between items-center w-full">
-                      <span className="flex-1 overflow-hidden break-words min-w-0">{task.text}</span>
+                      <div className="flex-1 overflow-hidden min-w-0">
+                        <span className="block break-words text-sm font-medium">{task.title ?? task.text}</span>
+                        {(task.category || task.priority) && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {task.priority && (
+                              <span className="text-[11px] text-muted-foreground capitalize">{task.priority}</span>
+                            )}
+                            {task.category && (
+                              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{task.category}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <Button
-                        onClick={(e) => handleReUseButton(index)}
+                        onClick={() => { handleReUseButton(task); setIsOpen(false); }}
                         size="sm"
                         variant="secondary"
                         className="ml-3 gap-2 shrink-0"

@@ -6,9 +6,10 @@ import { TodosList } from "./displayTasks/todoList";
 import { DonesList } from "./displayTasks/doneList";
 import { useTasksStore } from "@/store/tasksStore";
 import { useAuthStore } from "@/store/authStore";
+import { useUIStore } from "@/store/uiStore";
+import type { Task } from "@/store/tasksStore";
 import { TasksHistory } from "./displayTasks/tasksHistory";
 import { TemplateSheet } from "./displayTasks/templateSheet";
-import type { Task } from "@/store/tasksStore";
 
 interface Todo {
   id: string;
@@ -24,6 +25,7 @@ interface Done {
 
 export const DisplayTasks: React.FC = () => {
   const { user } = useAuthStore();
+  const { openTaskModal } = useUIStore();
   const { 
     getActiveTasks,
     getCompletedTasks, 
@@ -49,7 +51,7 @@ export const DisplayTasks: React.FC = () => {
 
   const todos: Todo[] = activeTasks.map(t => ({ id: t.id, text: t.text, isChecked: false }));
   const dones: Done[] = completedTasks.map(t => ({ id: t.id, text: t.text, isChecked: true }));
-  const historyTasks: Todo[] = deletedTasks.slice(-10).map(t => ({ id: t.id, text: t.text, isChecked: false }));
+  const historyTasks: Task[] = deletedTasks.slice(-10);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setInputValue(e.target.value);
@@ -88,13 +90,9 @@ export const DisplayTasks: React.FC = () => {
     await archiveAllCompleted(user?.id);
   }
 
-  async function handleReUseButton(index: number) {
-    const deletedTasksList = getDeletedTasks();
-    const last10 = deletedTasksList.slice(-10);
-    const task = last10[index];
-    if (task) {
-      await undoTask(task.id, user?.id);
-    }
+  function handleReUseButton(task: Task) {
+    // Pre-fill Add Task modal with all task params from history
+    openTaskModal({ ...task, isTemplate: true });
   }
 
   function handleClearHistory() {
