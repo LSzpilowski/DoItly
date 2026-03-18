@@ -92,7 +92,7 @@ export const TemplateSheet: React.FC = () => {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="max-h-screen w-full sm:max-w-lg bg-gradient-to-br from-black to-gray-900">
+      <SheetContent side="left" className="max-h-screen w-full sm:max-w-lg bg-white">
         <SheetHeader>
           <SheetTitle>Task Templates</SheetTitle>
           <SheetDescription>

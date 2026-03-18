@@ -1,8 +1,11 @@
 import { Footer } from "@/app/components/footer";
 import { Header } from "@/app/components/header";
 import { DisplayTasks } from "@/app/components/tasks/displayTasks";
+import { useOfflineDetector } from "@/hooks/useOfflineDetector";
 
 export default function App() {
+  useOfflineDetector();
+
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/20">
       <Header />
