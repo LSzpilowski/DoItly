@@ -68,7 +68,7 @@ export const DonesList: React.FC<IDoneList> = ({ dones, handleUndo, handleArchiv
   const hiddenCount = dones.length - visibleDones.length;
 
   return (
-    <Card className="w-full md:w-1/2 flex flex-col min-h-65 max-h-65 md:min-h-110 md:max-h-110 shadow-md border-2 transition-all hover:shadow-lg bg-white">
+    <Card className="w-full md:w-1/2 flex flex-col min-h-65 max-h-65 md:min-h-110 md:max-h-110 shadow-md border-2 transition-all hover:shadow-lg bg-gradient-to-br from-black to-gray-900">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-2xl md:text-2xl font-semibold flex items-center gap-2">

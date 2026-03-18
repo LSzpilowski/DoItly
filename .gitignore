@@ -26,3 +26,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# Playwright test artifacts
+/playwright-report/
+/test-results/
+
+# Internal documentation (local only)
+docs/

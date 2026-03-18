@@ -81,7 +81,7 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="max-h-screen w-full sm:max-w-lg bg-white">
+      <SheetContent className="max-h-screen w-full sm:max-w-lg bg-gradient-to-br from-black to-gray-900">
         <SheetHeader>
           <SheetTitle>Task History</SheetTitle>
           <SheetDescription>
@@ -106,7 +106,7 @@ export const TasksHistory: React.FC<ITasksHistory> = ({
                       Clear All History
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-white text-white hover:bg-black/90 z-9999">
+                  <AlertDialogContent className="bg-gradient-to-br from-black to-gray-900 text-white hover:bg-black/90 z-9999">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Clear All History?</AlertDialogTitle>
                       <AlertDialogDescription>
