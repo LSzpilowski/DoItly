@@ -107,11 +107,11 @@ export const TodosList: React.FC<ITodosList> = ({
                       autoFocus
                     />
                     <div className="flex flex-row justify-evenly items-center gap-1">
-                      <Button className="bg-black/50 dark:bg-white text-white dark:text-black hover:bg-black/70 dark:hover:bg-white/90" size="sm" onClick={handleEditSave}>
+                      <Button className="bg-primary text-primary-foreground hover:opacity-90" size="sm" onClick={handleEditSave}>
                         Save
                       </Button>
                       <Button
-                        className="hover:bg-black/10 dark:hover:bg-white/10"
+                        className="hover:bg-accent"
                         size="sm"
                         variant="outline"
                         onClick={handleEditCancel}
@@ -134,7 +134,7 @@ export const TodosList: React.FC<ITodosList> = ({
                         <Button
                           variant="outline" 
                           size="sm" 
-                          className="gap-1 text-xs hover:bg-white/10"
+                          className="gap-1 text-xs hover:bg-accent"
                           onClick={() => handleEditStart(index)}
                           aria-label="Edit task"
                         >
@@ -144,7 +144,7 @@ export const TodosList: React.FC<ITodosList> = ({
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="gap-1 text-xs hover:bg-white/10"
+                          className="gap-1 text-xs hover:bg-accent"
                           onClick={() => handleDone(index)}
                           aria-label="Mark task as done"
                         >
@@ -156,13 +156,13 @@ export const TodosList: React.FC<ITodosList> = ({
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="gap-1 text-xs hover:bg-white/10"
+                              className="gap-1 text-xs hover:bg-accent"
                               aria-label="Delete task"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-black text-white hover:bg-black/90 z-9999">
+                        <AlertDialogContent className="bg-background z-9999">
                           <AlertDialogHeader >
                             <AlertDialogTitle>Delete Task?</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -170,10 +170,10 @@ export const TodosList: React.FC<ITodosList> = ({
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel className="hover:opacity-80">Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="hover:bg-accent">Cancel</AlertDialogCancel>
                             <AlertDialogAction 
                               onClick={() => handleDelete(index)}
-                              className="bg-white text-black hover:bg-white/80"
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
                             >
                               Delete
                             </AlertDialogAction>

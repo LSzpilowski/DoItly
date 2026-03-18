@@ -4,20 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { TasksHistory } from "./tasksHistory";
 import { TemplateSheet } from "./templateSheet";
-
-interface Todo {
-  id: string;
-  text: string;
-  isChecked: boolean;
-}
+import type { Task } from "@/store/tasksStore";
 
 interface IAddTasks {
   inputValue: string;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  historyTasks: Todo[];
+  historyTasks: Task[];
   handleClearHistory: () => void;
-  handleReUseButton: (index: number) => Promise<void>;
+  handleReUseButton: (task: Task) => void;
 }
 
 export const AddTasks = ({
