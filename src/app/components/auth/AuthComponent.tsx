@@ -92,7 +92,7 @@ export function AuthComponent() {
         <Button 
           onClick={handleGoogleSignIn}
           variant="outline" 
-          className="w-full gap-2 hover:bg-white/10"
+          className="w-full gap-2 hover:bg-accent"
         >
           <GoogleIcon />
           Continue with Google
@@ -100,7 +100,7 @@ export function AuthComponent() {
         <Button 
           onClick={handleGithubSignIn}
           variant="outline" 
-          className="w-full gap-2 hover:bg-white/10"
+          className="w-full gap-2 hover:bg-accent"
         >
           <GitHubIcon />
           Continue with GitHub

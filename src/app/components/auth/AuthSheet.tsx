@@ -11,9 +11,18 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
-export function AuthSheet() {
-  const [open, setOpen] = useState(false);
+interface AuthSheetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AuthSheet({ open: controlledOpen, onOpenChange }: AuthSheetProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const { user } = useAuthStore();
+
+  const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? onOpenChange : setInternalOpen;
 
   if (user && open) {
     setOpen(false);
@@ -21,12 +30,14 @@ export function AuthSheet() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className='hover:bg-white/10'>
-          Log in
-        </Button>
-      </SheetTrigger>
-      <SheetContent className='bg-gradient-to-br from-black to-gray-900'>
+      {!isControlled && (
+        <SheetTrigger asChild>
+          <Button variant="outline" size="sm" className='hover:bg-accent'>
+            Log in
+          </Button>
+        </SheetTrigger>
+      )}
+      <SheetContent className='bg-background'>
         <SheetHeader>
           <SheetTitle>Welcome to DoItly</SheetTitle>
           <SheetDescription>

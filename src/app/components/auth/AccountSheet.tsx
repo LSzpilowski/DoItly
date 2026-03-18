@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { User, TrendingUp, CheckCircle, ListTodo, Archive, FileText, Calendar, LogOut, Trash2, Download } from "lucide-react";
+import { User, TrendingUp, CheckCircle, ListTodo, Archive, FileText, Calendar, LogOut, Trash2, Download, Timer, BarChart2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -23,11 +23,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuthStore } from "@/store/authStore";
 import { useTasksStore } from "@/store/tasksStore";
+import { usePomodoroStore } from "@/store/pomodoroStore";
 import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { PrivacyPolicyModal } from "../legal/PrivacyPolicyModal";
+import { GDPRModal } from "../legal/GDPRModal";
 
-export const AccountSheet: React.FC = () => {
+interface AccountSheetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const AccountSheet: React.FC<AccountSheetProps> = ({ open: controlledOpen, onOpenChange }) => {
   const { user, signOut, deleteAccount } = useAuthStore();
   const { getStats, tasks } = useTasksStore();
+  const { getStats: getPomodoroStats, loadSessions } = usePomodoroStore();
+  const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [timePeriod, setTimePeriod] = useState<'month' | 'year'>('month');
@@ -36,7 +47,10 @@ export const AccountSheet: React.FC = () => {
     React.startTransition(() => {
       setMounted(true);
     });
-  }, []);
+    // Load pomodoro sessions from Supabase when user is present
+    if (user) loadSessions(user.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -102,17 +116,31 @@ export const AccountSheet: React.FC = () => {
     activeVsCompletedRatio: 0,
   };
 
+  const pomodoroStats = mounted ? getPomodoroStats() : {
+    thisMonthStarted: 0, thisMonthEnded: 0,
+    thisYearStarted: 0,  thisYearEnded: 0,
+  };
+
   if (!user) return null;
 
+  const sheetProps = controlledOpen !== undefined && onOpenChange
+    ? { open: controlledOpen, onOpenChange }
+    : {};
+
+  const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 hover:bg-white/10" aria-label="Open account">
-          <User className="h-5 w-5" />
-          Account
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="max-h-screen w-full sm:max-w-lg overflow-y-auto bg-gradient-to-br from-black to-gray-900">
+    <Sheet {...sheetProps}>
+      {!isControlled && (
+        <SheetTrigger asChild>
+          {/* On mobile: icon only. On md+: icon + label */}
+          <Button variant="outline" className="flex items-center gap-2 hover:bg-accent" aria-label="Open account">
+            <User className="h-5 w-5" />
+            <span className="hidden md:inline">Account</span>
+          </Button>
+        </SheetTrigger>
+      )}
+      <SheetContent side="right" className="max-h-screen w-full sm:max-w-lg overflow-y-auto bg-background">
         <SheetHeader>
           <SheetTitle>Account & Statistics</SheetTitle>
           <SheetDescription>
@@ -151,7 +179,7 @@ export const AccountSheet: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleExportData}
-                  className="gap-2 shrink-0 hover:bg-white/10"
+                  className="gap-2 shrink-0 hover:bg-accent"
                   title="Export your data (GDPR)"
                 >
                   <Download className="h-4 w-4" />
@@ -238,6 +266,46 @@ export const AccountSheet: React.FC = () => {
               </Card>
             </div>
 
+            {/* Pomodoro Statistics */}
+            <Card className="border-2 md:col-span-2">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Timer className="h-5 w-5 text-red-500" />
+                  <p className="text-sm font-semibold text-foreground">Pomodoro Sessions</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">This Month</p>
+                    <div className="flex items-baseline gap-3">
+                      <div>
+                        <p className="text-xl font-bold">{pomodoroStats.thisMonthStarted}</p>
+                        <p className="text-[11px] text-muted-foreground">Started</p>
+                      </div>
+                      <div className="text-muted-foreground/30 text-lg">/</div>
+                      <div>
+                        <p className="text-xl font-bold text-green-600">{pomodoroStats.thisMonthEnded}</p>
+                        <p className="text-[11px] text-muted-foreground">Completed</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">This Year</p>
+                    <div className="flex items-baseline gap-3">
+                      <div>
+                        <p className="text-xl font-bold">{pomodoroStats.thisYearStarted}</p>
+                        <p className="text-[11px] text-muted-foreground">Started</p>
+                      </div>
+                      <div className="text-muted-foreground/30 text-lg">/</div>
+                      <div>
+                        <p className="text-xl font-bold text-green-600">{pomodoroStats.thisYearEnded}</p>
+                        <p className="text-[11px] text-muted-foreground">Completed</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Monthly/Yearly Stats */}
             {stats.monthlyTasksCreated && Object.keys(stats.monthlyTasksCreated).length > 0 && (
               <Card className="border-2">
@@ -247,7 +315,7 @@ export const AccountSheet: React.FC = () => {
                       variant='outline'
                       size="sm"
                       onClick={() => setTimePeriod('month')}
-                      className={timePeriod === 'year' ? 'hover:bg-white/10' :'bg-white text-black'}
+                      className={timePeriod === 'year' ? 'hover:bg-accent' :'bg-primary text-primary-foreground'}
                     >
                       This Month
                     </Button>
@@ -255,7 +323,7 @@ export const AccountSheet: React.FC = () => {
                       variant='outline'
                       size="sm"
                       onClick={() => setTimePeriod('year')}
-                      className={timePeriod === 'year' ? 'bg-white text-black' : 'hover:bg-white/10'}
+                      className={timePeriod === 'year' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}
                     >
                       This Year
                     </Button>
@@ -304,11 +372,22 @@ export const AccountSheet: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="space-y-2">
+            {/* Full Statistics Button */}
+            <Button
+              onClick={() => navigate('/statistics')}
+              variant="outline"
+              className="w-full gap-2 hover:bg-accent"
+              size="lg"
+            >
+              <BarChart2 className="h-4 w-4" />
+              Full Statistics
+            </Button>
+
             {/* Sign Out Button */}
             <Button 
               onClick={signOut} 
               variant="outline" 
-              className="w-full gap-2 hover:bg-white/10"
+              className="w-full gap-2 hover:bg-accent"
               size="lg"
             >
               <LogOut className="h-4 w-4" />
@@ -353,7 +432,7 @@ export const AccountSheet: React.FC = () => {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="hover:bg-white/10">Cancel</AlertDialogCancel>
+                  <AlertDialogCancel className="hover:bg-accent">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDeleteAccount}
                     disabled={isDeleting}
@@ -364,6 +443,32 @@ export const AccountSheet: React.FC = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </div>
+        </div>
+
+        {/* Footer — links at the bottom of the account sheet */}
+        <div className="mt-8 pt-4 border-t border-border/40 flex flex-col items-center gap-2 text-sm text-muted-foreground">
+          <p className="flex items-center gap-1">
+            DoItly by
+            <a
+              className="font-semibold text-primary hover:underline transition-all hover:opacity-80"
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://lszpilowski.com"
+            >
+              LSzpilowski
+            </a>
+          </p>
+          <div className="flex items-center gap-3 text-xs">
+            <p>© {new Date().getFullYear()} DoItly. All rights reserved.</p>
+            <span>•</span>
+            <PrivacyPolicyModal>
+              <button className="text-primary hover:underline transition-all">Privacy Policy</button>
+            </PrivacyPolicyModal>
+            <span>•</span>
+            <GDPRModal>
+              <button className="text-primary hover:underline transition-all">GDPR</button>
+            </GDPRModal>
           </div>
         </div>
       </SheetContent>
