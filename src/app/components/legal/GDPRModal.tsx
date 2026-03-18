@@ -17,7 +17,7 @@ export function GDPRModal({ children }: { children: React.ReactNode }) {
       <AlertDialogTrigger asChild className='hover:cursor-pointer'> 
         {children}
       </AlertDialogTrigger>
-      <AlertDialogContent className="max-w-3xl max-h-[80vh] bg-gradient-to-br from-black to-gray-900">
+      <AlertDialogContent className="max-w-3xl max-h-[80vh] bg-background">
         <AlertDialogHeader>
           <AlertDialogTitle>GDPR Information</AlertDialogTitle>
           <AlertDialogDescription>
