@@ -223,31 +223,32 @@ export const DayPlanningView = () => {
 
   // Active tasks only (not completed/deleted/archived/template)
   const activeTasks = useMemo(
-    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress") && !t.isTemplate),
+    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate),
     [tasks]
   );
 
-  // "To do today" = tasks with dueDate set to today (single source of truth)
-  // Exclude overdue tasks — they belong in the Overdue view instead
+  // "To do today" = all tasks with dueDate set to today (single source of truth)
+  // Includes overdue tasks with dueDate === today (per test expectations)
   const todayTasks = useMemo(
     () =>
       activeTasks.filter(
-        (t) => (t.status === 'active' || t.status === 'inProgress') && t.dueDate === todayStr()
+        (t) => t.dueDate === todayStr()
       ),
     [activeTasks]
   );
 
-  // Priority buckets — exclude tasks already in todayTasks to avoid duplication
-  const todayIds = useMemo(() => new Set(todayTasks.map((t) => t.id)), [todayTasks]);
-
-  const buckets = useMemo(() => {
-    const rest = activeTasks.filter((t) => !todayIds.has(t.id));
-    return {
-      high:   sortByDueDate(rest.filter((t) => t.priority === "high")),
-      medium: sortByDueDate(rest.filter((t) => t.priority === "medium")),
-      low:    sortByDueDate(rest.filter((t) => t.priority === "low")),
-    };
-  }, [activeTasks, todayIds]);
+  // Pool: only tasks without a dueDate OR overdue (so users can plan/reschedule them)
+  // Do NOT exclude tasks scheduled for today or any other date; only dueDate presence matters
+  const pool = useMemo(
+    () => activeTasks.filter((t) => !t.dueDate || t.status === "overdue"),
+    [activeTasks]
+  );
+  const buckets = useMemo(() => ({
+    high:   sortByDueDate(pool.filter((t) => t.priority === "high")),
+    medium: sortByDueDate(pool.filter((t) => t.priority === "medium")),
+    low:    sortByDueDate(pool.filter((t) => t.priority === "low")),
+    none:   sortByDueDate(pool.filter((t) => !t.priority)),
+  }), [pool]);
 
   const activeTask = useMemo(
     () => activeTasks.find((t) => t.id === activeId) ?? null,
@@ -293,12 +294,41 @@ export const DayPlanningView = () => {
         {/* Row 1: To do today */}
         <TodayBox tasks={todayTasks} onRemove={handleRemoveFromToday} />
 
-        {/* Row 2: Priority buckets — hide empty ones */}
+        {/* Row 2: Priority buckets — mobile carousel, desktop grid */}
         <div>
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             All active tasks — drag to add to today
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Mobile carousel */}
+          <div className="flex sm:hidden gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+            {buckets.high.length > 0 && (
+              <div className="flex-shrink-0 w-[85vw] snap-start">
+                <PriorityBox title="Must have" tasks={buckets.high} accentClass="text-red-600 dark:text-red-400" dotClass="bg-red-500" />
+              </div>
+            )}
+            {buckets.medium.length > 0 && (
+              <div className="flex-shrink-0 w-[85vw] snap-start">
+                <PriorityBox title="Should have" tasks={buckets.medium} accentClass="text-amber-600 dark:text-amber-400" dotClass="bg-amber-500" />
+              </div>
+            )}
+            {buckets.low.length > 0 && (
+              <div className="flex-shrink-0 w-[85vw] snap-start">
+                <PriorityBox title="Nice to have" tasks={buckets.low} accentClass="text-green-600 dark:text-green-400" dotClass="bg-green-500" />
+              </div>
+            )}
+            {buckets.none.length > 0 && (
+              <div className="flex-shrink-0 w-[85vw] snap-start">
+                <PriorityBox title="No Priority" tasks={buckets.none} accentClass="text-muted-foreground" dotClass="bg-muted-foreground/40" />
+              </div>
+            )}
+            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
+              <div className="w-full text-center py-6 text-sm text-muted-foreground/60">
+                All tasks are planned for today
+              </div>
+            )}
+          </div>
+          {/* Desktop grid */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4">
             {buckets.high.length > 0 && (
               <PriorityBox
                 title="Must have"
@@ -323,7 +353,15 @@ export const DayPlanningView = () => {
                 dotClass="bg-green-500"
               />
             )}
-            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && (
+            {buckets.none.length > 0 && (
+              <PriorityBox
+                title="No Priority"
+                tasks={buckets.none}
+                accentClass="text-muted-foreground"
+                dotClass="bg-muted-foreground/40"
+              />
+            )}
+            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
               <div className="sm:col-span-3 text-center py-6 text-sm text-muted-foreground/60">
                 All tasks are planned for today
               </div>

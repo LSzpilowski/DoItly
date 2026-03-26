@@ -2,7 +2,7 @@
 
 export type Priority = 'low' | 'medium' | 'high';
 export type Repeat = 'none' | 'daily' | 'weekly' | 'monthly';
-export type View = 'all' | 'today' | 'completed' | 'category' | 'planDay' | 'planWeek' | 'planMonth' | 'calendar' | 'thisWeek' | 'overdue';
+export type View = 'all' | 'today' | 'completed' | 'category' | 'planDay' | 'planWeek' | 'planMonth' | 'thisWeek' | 'overdue';
 export type SortField = 'created' | 'dueDate' | 'priority' | 'title';
 export type SortDir = 'asc' | 'desc';
 

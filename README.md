@@ -9,7 +9,8 @@ A clean, minimal todo app built with React + Vite. Supports Google OAuth, cloud 
 ## Features
 
 - **Tasks** – add, edit, complete, archive, delete, rich fields (title, description, due date, priority, repeat, tags, notes, subtasks)
-- **Drag & Drop Planning** – plan your day/week/month with DnD in DayPlanner, WeekPlanner, CalendarView
+- **Optimistic updates** – tasks appear instantly; if save fails, a warning indicator (⚠️) is shown with one-click retry
+- **Drag & Drop Planning** – plan your day/week/month with DnD in Planner (Day / Week / Month tabs)
 - **Templates** – save reusable tasks for quick re-use
 - **Workspaces & Categories** – multiple workspaces, custom categories per workspace
 - **Pomodoro Focus Mode** – timer, session stats, sound alerts, push notifications
@@ -19,7 +20,7 @@ A clean, minimal todo app built with React + Vite. Supports Google OAuth, cloud 
 - **Security** – RLS, whitelist, rate limiting, CSP headers, GDPR delete
 - **Dark / light / system theme** – Tailwind v4 + next-themes, WCAG AA contrast
 - **Offline detector** – toast on network change
-- **E2E tests** – Playwright scenarios I–IX
+- **E2E tests** – Playwright: dataflow scenarios I–VIII + bugfix regression suite (Suite A–C)
 - **Roadmap & spec-driven development** – see `/docs/`
 
 ---

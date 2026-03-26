@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { DayPlanningView } from "./DayPlanningView";
 import { WeekPlanningView } from "./WeekPlanningView";
+import { MonthPlanningView } from "./MonthPlanningView";
 
-type PlannerTab = "day" | "week";
+type PlannerTab = "day" | "week" | "month";
 
 const TABS: { id: PlannerTab; label: string; }[] = [
-  { id: "day",  label: "Day"},
-  { id: "week", label: "Week"},
+  { id: "day",   label: "Day" },
+  { id: "week",  label: "Week" },
+  { id: "month", label: "Month" },
 ];
 
 interface PlannerShellProps {
@@ -37,8 +39,9 @@ export const PlannerShell = ({ initialTab = "day" }: PlannerShellProps) => {
       </div>
 
       {/* Content */}
-      {tab === "day"  && <DayPlanningView />}
-      {tab === "week" && <WeekPlanningView />}
+      {tab === "day"   && <DayPlanningView />}
+      {tab === "week"  && <WeekPlanningView />}
+      {tab === "month" && <MonthPlanningView />}
     </div>
   );
 };

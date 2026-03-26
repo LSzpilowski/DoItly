@@ -73,11 +73,11 @@ export const Header = () => {
       <div className="flex items-center justify-between px-4 md:px-6 h-14">
         {/* Logo / Brand */}
         <div className="flex items-center gap-3 md:w-1/4">
-          {/* SVG logo — clickable, navigates to Today */}
+          {/* SVG logo — clickable, navigates to All Tasks */}
           <button
-            onClick={() => { setView("today"); navigate("/today"); }}
-            title="Go to Today"
-            aria-label="Go to Today"
+            onClick={() => { setView("all"); navigate("/all"); }}
+            title="Go to All Tasks"
+            aria-label="Go to All Tasks"
             className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity flex-shrink-0 hover:cursor-pointer"
           >
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,11 +86,11 @@ export const Header = () => {
           </button>
 
           <div>
-            {/* Title — clickable, navigates to Today */}
+            {/* Title — clickable, navigates to All Tasks */}
             <button
-              onClick={() => { setView("today"); navigate("/today"); }}
-              title="Go to Today"
-              aria-label="Go to Today"
+              onClick={() => { setView("all"); navigate("/all"); }}
+              title="Go to All Tasks"
+              aria-label="Go to All Tasks"
               className="text-xl font-bold text-foreground hover:text-primary hover:cursor-pointer transition-colors leading-tight"
             >
               DoItly

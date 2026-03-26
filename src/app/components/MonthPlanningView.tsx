@@ -4,6 +4,7 @@ import {
   DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -13,6 +14,7 @@ import {
 import { useTasksStore, type Task } from "@/store/tasksStore";
 import { useUIStore } from "@/store/uiStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import type { Priority } from "@/store/types";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localDateStr(d: Date): string {
@@ -48,60 +50,105 @@ function todayStr() {
   return localDateStr(new Date());
 }
 
-// ─── Mini chip ────────────────────────────────────────────────────────────────
-const Chip = ({
+// ─── Draggable chip (placed on calendar day — supports inter-day moves) ───────
+const DraggableChip = ({
   task,
   onRemove,
 }: {
   task: Task;
   onRemove?: () => void;
-}) => (
-  <div className="group flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium overflow-hidden">
-    {task.priority && (
-      <span
-        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-          task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500"
-        }`}
-      />
-    )}
-    <span className="truncate flex-1">{task.title ?? task.text}</span>
-    {onRemove && (
-      <button
-        onClick={onRemove}
-        className="opacity-0 group-hover:opacity-100 flex-shrink-0 hover:text-destructive transition-all"
-        aria-label="Remove"
-      >
-        ×
-      </button>
-    )}
-  </div>
-);
-
-// ─── Draggable pool card ──────────────────────────────────────────────────────
-const DraggablePoolCard = ({ task }: { task: Task }) => {
+}) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`group flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none border border-primary/20 transition-opacity ${
+        isDragging ? "opacity-30" : ""
+      }`}
+    >
+      {task.priority && (
+        <span
+          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+            task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500"
+          }`}
+        />
+      )}
+      <span className="truncate flex-1">{task.title ?? task.text}</span>
+      {onRemove && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 flex-shrink-0 hover:text-destructive transition-all"
+          aria-label="Remove"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ─── Draggable pool card (full TaskCard style — matches Day/Week) ─────────────
+const DraggablePoolCard = ({ task }: { task: Task }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  const label = task.title ?? task.text;
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    >
       <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-xl border bg-card text-sm transition-all ${
-          isDragging ? "opacity-40 border-primary/40 shadow-lg" : "border-border hover:border-border/80"
+        className={`group flex items-start justify-between gap-2 px-3 py-2.5 rounded-xl border bg-card transition-all ${
+          isDragging ? "opacity-50 shadow-lg border-primary/40" : "border-border hover:border-border/80 hover:shadow-sm"
         }`}
       >
-        {task.priority && (
-          <span
-            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-              task.priority === "high" ? "bg-red-500" : task.priority === "medium" ? "bg-amber-500" : "bg-green-500"
-            }`}
-          />
-        )}
-        <span className="flex-1 truncate font-medium text-foreground">{task.title ?? task.text}</span>
-        {task.category && (
-          <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground">{task.category}</span>
-        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{label}</p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            {task.category && (
+              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">
+                {task.category}
+              </span>
+            )}
+            {task.dueDate && (
+              <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                Overdue
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+
+// ─── Priority pool box ───────────────────────────────────────────────────────
+interface PriorityPoolBoxProps {
+  title: string;
+  tasks: Task[];
+  accentClass: string;
+  dotClass: string;
+}
+
+const PriorityPoolBox = ({ title, tasks, accentClass, dotClass }: PriorityPoolBoxProps) => (
+  <div className="rounded-2xl border border-border bg-card flex flex-col min-h-[180px]">
+    <div className="px-4 py-3 border-b border-border/60 flex items-center gap-2">
+      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotClass}`} />
+      <h3 className={`text-sm font-bold ${accentClass}`}>{title}</h3>
+      <span className="ml-auto text-xs text-muted-foreground">{tasks.length}</span>
+    </div>
+    <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-80">
+      {tasks.length === 0 ? (
+        <p className="text-xs text-muted-foreground/50 py-4 text-center">No tasks</p>
+      ) : (
+        tasks.map((t) => <DraggablePoolCard key={t.id} task={t} />)
+      )}
+    </div>
+  </div>
+);
 
 // ─── Droppable calendar cell ──────────────────────────────────────────────────
 interface CalendarCellProps {
@@ -136,7 +183,7 @@ const CalendarCell = ({ dateStr, dayNum, isToday, tasks, onRemove }: CalendarCel
       </span>
       <div className="flex flex-col gap-0.5 overflow-hidden">
         {tasks.slice(0, 3).map((t) => (
-          <Chip key={t.id} task={t} onRemove={() => onRemove(t.id)} />
+          <DraggableChip key={t.id} task={t} onRemove={() => onRemove(t.id)} />
         ))}
         {tasks.length > 3 && (
           <span className="text-[10px] text-muted-foreground pl-1">+{tasks.length - 3} more</span>
@@ -158,7 +205,8 @@ export const MonthPlanningView = () => {
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
   );
 
   const monthGrid = useMemo(() => getMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
@@ -184,7 +232,7 @@ export const MonthPlanningView = () => {
     [allTasks, activeWorkspaceName],
   );
   const activeTasks = useMemo(
-    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress") && !t.isTemplate),
+    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate),
     [tasks]
   );
 
@@ -194,6 +242,29 @@ export const MonthPlanningView = () => {
     [monthGrid]
   );
 
+  // Pool: only tasks without a dueDate — so users can plan/schedule them
+  const pool = useMemo(
+    () => activeTasks.filter((t) => !t.dueDate),
+    [activeTasks]
+  );
+
+  // Priority buckets for the pool panel
+  const buckets = useMemo(() => {
+    const sortByDue = (arr: Task[]) =>
+      [...arr].sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      });
+    return {
+      high:   sortByDue(pool.filter((t) => t.priority === "high"   as Priority)),
+      medium: sortByDue(pool.filter((t) => t.priority === "medium" as Priority)),
+      low:    sortByDue(pool.filter((t) => t.priority === "low"    as Priority)),
+      none:   sortByDue(pool.filter((t) => !t.priority)),
+    };
+  }, [pool]);
+
   // Tasks per date — driven by dueDate (single source of truth)
   const dayTasksMap = useMemo(() => {
     const map: Record<string, Task[]> = {};
@@ -202,20 +273,6 @@ export const MonthPlanningView = () => {
     });
     return map;
   }, [activeTasks, monthDateStrs]);
-
-  // Unplanned tasks (no dueDate, or dueDate not in this month)
-  const plannedInMonthIds = useMemo(() => {
-    const ids = new Set<string>();
-    monthDateStrs.forEach((dateStr) => {
-      activeTasks.forEach((t) => { if (t.dueDate === dateStr) ids.add(t.id); });
-    });
-    return ids;
-  }, [activeTasks, monthDateStrs]);
-
-  const unplanned = useMemo(
-    () => activeTasks.filter((t) => !plannedInMonthIds.has(t.id)),
-    [activeTasks, plannedInMonthIds]
-  );
 
   const activeTask = useMemo(
     () => activeTasks.find((t) => t.id === activeId) ?? null,
@@ -231,9 +288,11 @@ export const MonthPlanningView = () => {
       const dateStr = overId.replace("month-day-", "");
       const task = activeTasks.find((t) => t.id === active.id);
       if (!task || task.dueDate === dateStr) return;
-      // dueDate is the single source of truth.
+      // Assign to this date
       updateTaskRich(active.id as string, { dueDate: dateStr }, task.userId);
     }
+    // Optionally, handle removing from a day (drag to pool panel)
+    // Could implement if pool panel is droppable, but for now, removal is via onRemove in CalendarCell
   };
 
   return (
@@ -285,7 +344,7 @@ export const MonthPlanningView = () => {
           </div>
           {/* Weeks */}
           {monthGrid.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-px bg-border">
+            <div key={wi} className="grid grid-cols-7 gap-px">
               {week.map((dateStr, di) =>
                 dateStr ? (
                   <CalendarCell
@@ -300,32 +359,68 @@ export const MonthPlanningView = () => {
                     }}
                   />
                 ) : (
-                  <div key={`empty-${wi}-${di}`} className="min-h-[80px] bg-muted/20" />
+                  <div key={`empty-${wi}-${di}`} className="min-h-[80px] bg-border rounded-xl border-2" />
                 )
               )}
             </div>
           ))}
         </div>
 
-        {/* Unplanned pool */}
+        {/* Priority pool — drag tasks onto calendar dates */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Unplanned tasks — drag to a date
-            </h2>
-            <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{unplanned.length}</span>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            All active tasks — drag to add to a date
+          </h2>
+          {/* Mobile carousel */}
+          <div className="flex sm:hidden gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+            {buckets.high.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityPoolBox title="Must have"    tasks={buckets.high}   accentClass="text-red-600 dark:text-red-400"    dotClass="bg-red-500" /></div>}
+            {buckets.medium.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityPoolBox title="Should have"  tasks={buckets.medium} accentClass="text-amber-600 dark:text-amber-400" dotClass="bg-amber-500" /></div>}
+            {buckets.low.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityPoolBox title="Nice to have" tasks={buckets.low}    accentClass="text-green-600 dark:text-green-400" dotClass="bg-green-500" /></div>}
+            {buckets.none.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityPoolBox title="No Priority"  tasks={buckets.none}   accentClass="text-muted-foreground"              dotClass="bg-muted-foreground/40" /></div>}
+            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
+              <div className="w-full text-center py-6 text-sm text-muted-foreground/60">No active tasks</div>
+            )}
           </div>
-          {unplanned.length === 0 ? (
-            <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground/50 text-sm">
-              All active tasks are planned for this month!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {unplanned.map((t) => (
-                <DraggablePoolCard key={t.id} task={t} />
-              ))}
-            </div>
-          )}
+          {/* Desktop grid */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+            {buckets.high.length > 0 && (
+              <PriorityPoolBox
+                title="Must have"
+                tasks={buckets.high}
+                accentClass="text-red-600 dark:text-red-400"
+                dotClass="bg-red-500"
+              />
+            )}
+            {buckets.medium.length > 0 && (
+              <PriorityPoolBox
+                title="Should have"
+                tasks={buckets.medium}
+                accentClass="text-amber-600 dark:text-amber-400"
+                dotClass="bg-amber-500"
+              />
+            )}
+            {buckets.low.length > 0 && (
+              <PriorityPoolBox
+                title="Nice to have"
+                tasks={buckets.low}
+                accentClass="text-green-600 dark:text-green-400"
+                dotClass="bg-green-500"
+              />
+            )}
+            {buckets.none.length > 0 && (
+              <PriorityPoolBox
+                title="No Priority"
+                tasks={buckets.none}
+                accentClass="text-muted-foreground"
+                dotClass="bg-muted-foreground/40"
+              />
+            )}
+            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
+              <div className="sm:col-span-3 text-center py-6 text-sm text-muted-foreground/60">
+                No active tasks
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

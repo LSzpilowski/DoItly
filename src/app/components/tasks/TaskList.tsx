@@ -7,7 +7,6 @@ import { useWorkspaceStore } from "@/store/workspaceStore";
 import { TaskItem } from "./TaskItem";
 import type { Task } from "@/store/tasksStore";
 import type { Priority, SortField, View } from "@/store/types";
-import { CalendarView } from "@/app/components/CalendarView";
 import { getISOWeekString } from "@/store/tasksStore";
 
 const PRIORITY_ORDER: Record<Priority, number> = {
@@ -209,6 +208,7 @@ export const TaskList = () => {
   const {
     tasks: storeTasks,
     bulkComplete,
+    bulkUndo,
     bulkDelete,
     bulkSetPriority,
   } = useTasksStore();
@@ -289,8 +289,6 @@ export const TaskList = () => {
         return workspaceTasks.filter(
           (t) => t.status === "overdue" && !t.isTemplate,
         );
-      case "calendar":
-        return []; // CalendarView renders itself
       case "category":
         if (!currentCategory) return workspaceTasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate);
         if (currentCategory.startsWith("#")) {
@@ -383,6 +381,13 @@ export const TaskList = () => {
     showNotification(`${ids.length} task${ids.length > 1 ? "s" : ""} completed`, "success");
   };
 
+  const handleBulkUndo = async () => {
+    const ids = [...selectedTasks];
+    await bulkUndo(ids, user?.id);
+    clearSelection();
+    showNotification(`${ids.length} task${ids.length > 1 ? "s" : ""} marked active`, "info");
+  };
+
   const handleBulkDelete = async () => {
     const ids = [...selectedTasks];
     await bulkDelete(ids, user?.id);
@@ -422,16 +427,11 @@ export const TaskList = () => {
       return `This Week — W${weekNum} · ${rangeLabel}`;
     }
     if (currentView === "overdue") return "Overdue";
-    if (currentView === "calendar") return "Calendar";
     return currentView.charAt(0).toUpperCase() + currentView.slice(1);
   }, [currentView, currentCategory]);
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-w-0 pb-8">
-      {/* Calendar view: full self-contained component */}
-      {currentView === "calendar" ? (
-        <CalendarView />
-      ) : (
       <>
       {/* Top bar: title + sort */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -519,13 +519,18 @@ export const TaskList = () => {
           <div className="flex-1" />
 
           <button
-            onClick={handleBulkComplete}
-            className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium transition-colors"
+            onClick={currentView === "completed" ? handleBulkUndo : handleBulkComplete}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+              currentView === "completed"
+                ? "bg-amber-500 text-white hover:bg-amber-600"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
           >
-            Complete
+            {currentView === "completed" ? "Undo" : "Complete"}
           </button>
 
-          {/* Priority dropdown */}
+          {/* Priority dropdown — hidden in Completed view */}
+          {currentView !== "completed" && (
           <div className="relative">
             <select
               onChange={(e) => {
@@ -545,6 +550,7 @@ export const TaskList = () => {
               <option value="high">High</option>
             </select>
           </div>
+          )}
 
           <button
             onClick={handleBulkDelete}
@@ -635,8 +641,7 @@ export const TaskList = () => {
           ))}
         </div>
       )}
-      </>
-      )}
+      </>  
     </div>
   );
 };
