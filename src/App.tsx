@@ -4,7 +4,6 @@ import { Header } from "@/app/components/header";
 import { Sidebar } from "@/app/components/Sidebar";
 import { TaskList } from "@/app/components/tasks/TaskList";
 import { PlannerShell } from "@/app/components/PlannerShell";
-import { Footer } from "@/app/components/footer";
 const TaskModal = lazy(() => import("@/app/components/modals/TaskModal").then(m => ({ default: m.TaskModal })));
 const SearchModal = lazy(() => import("@/app/components/modals/SearchModal").then(m => ({ default: m.SearchModal })));
 const FocusModal = lazy(() => import("@/app/components/modals/FocusModal").then(m => ({ default: m.FocusModal })));
@@ -131,11 +130,6 @@ export default function App() {
           ) : (
             <TaskList />
           )}
-
-          {/* Footer: hidden on mobile — moved to AccountSheet */}
-          <div className="hidden md:block">
-            <Footer />
-          </div>
         </main>
       </div>
 
