@@ -12,7 +12,7 @@ export const BottomNav = ({ onOpenBrowse, browseActive }: BottomNavProps) => {
   const { currentView, setView, openTaskModal } = useUIStore();
   const navigate = useNavigate();
 
-  const isPlannerView = currentView === "planDay" || currentView === "planWeek";
+  const isPlannerView = currentView === "planDay" || currentView === "planWeek" || currentView === "planMonth";
 
   const setNavView = (view: View) => setView(view);
 
@@ -57,14 +57,14 @@ export const BottomNav = ({ onOpenBrowse, browseActive }: BottomNavProps) => {
             </span>
           </button>
 
-          {/* Calendar */}
+                    {/* Today */}
           <NavTab
-            label="Calendar"
-            isActive={currentView === "calendar"}
-            onClick={() => setNavView("calendar")}
+            label="Today"
+            isActive={currentView === "today"}
+            onClick={() => { setNavView("today"); navigate("/today"); }}
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707.707M6.343 6.343l-.707.707" />
               </svg>
             }
           />

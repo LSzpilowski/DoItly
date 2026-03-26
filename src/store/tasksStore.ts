@@ -25,10 +25,7 @@ export interface Task {
   notes?: string;
   subtasks?: Subtask[];
   workspace?: string;
-  // dueDate is the single source of truth for all planning views.
-  // It drives: Planner→Day (today), Planner→Week (this week), Planner→Month,
-  // Views→Today, Views→Week, Views→Calendar, MyFlow, and overdue detection.
-  // status:'overdue' replaces the old overdue:boolean + overdueAt fields.
+  saveError?: boolean;
 }
 
 export type UserStats = {
@@ -83,10 +80,12 @@ interface TasksState {
   useTemplate: (templateId: string, userId?: string) => Promise<void>;
   removeTemplate: (templateId: string, userId?: string) => Promise<void>;
   bulkComplete: (ids: string[], userId?: string) => Promise<void>;
+  bulkUndo: (ids: string[], userId?: string) => Promise<void>;
   bulkDelete: (ids: string[], userId?: string) => Promise<void>;
   bulkSetPriority: (ids: string[], priority: Priority, userId?: string) => Promise<void>;
   markOverdue: (ids: string[]) => Promise<void>;
   clearOverdue: (id: string, userId?: string) => Promise<void>;
+  retryTask: (id: string, userId?: string) => Promise<void>;
   
   loadTasks: (userId?: string) => Promise<void>;
   
@@ -272,15 +271,21 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     };
 
 
+    // Optimistic update
+    const optimisticTasks = [...get().tasks, newTask];
+    set({ tasks: optimisticTasks });
+    if (!userId) saveLocalTasks(optimisticTasks);
+
     if (userId) {
       // Rate limit: max 60 tasks/hour per user
       const { data: allowed } = await supabase.rpc('check_task_rate_limit');
       if (!allowed) {
         console.warn('[tasksStore] Rate limit exceeded');
+        set({ tasks: get().tasks.filter(t => t.id !== newTask.id) });
         return;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tasks')
         .insert([{
           id: newTask.id,
@@ -293,28 +298,18 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
       if (error) {
         console.error('Error adding task to Supabase:', error);
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error hint:', error.hint);
-        console.error('Error details:', error.details);
-        
-        // Show user-friendly error
         if (error.code === '42P01') {
           console.error('❌ Table "tasks" does not exist! Please run supabase-setup.sql in your Supabase SQL Editor.');
         } else if (error.code === '42703' || error.code === 'PGRST204') {
           console.error('❌ Column does not exist! Your table is OUTDATED!');
-          console.error('👉 Please run supabase-migration.sql in your Supabase SQL Editor to add missing columns.');
-          console.error('👉 See SUPABASE_SETUP_INSTRUCTIONS.md for details.');
         }
-        return;
+        // Mark task as failed (keep it visible, show error indicator)
+        set({ tasks: get().tasks.map(t => t.id === newTask.id ? { ...t, saveError: true } : t) });
+        throw error;
       }
-      
 
-      await get().loadTasks(userId);
-    } else {
-      const tasks = [...get().tasks, newTask];
-      set({ tasks });
-      saveLocalTasks(tasks);
+      // Sync in background
+      get().loadTasks(userId);
     }
   },
 
@@ -343,11 +338,18 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       userId,
     };
 
+    // Optimistic update: add task to store immediately for instant UI feedback
+    const optimisticTasks = [...get().tasks, newTask];
+    set({ tasks: optimisticTasks });
+    if (!userId) saveLocalTasks(optimisticTasks);
+
     if (userId) {
       // Rate limit: max 60 tasks/hour per user
       const { data: allowed } = await supabase.rpc('check_task_rate_limit');
       if (!allowed) {
         console.warn('[tasksStore] Rate limit exceeded');
+        // Rollback optimistic update
+        set({ tasks: get().tasks.filter(t => t.id !== newTask.id) });
         return;
       }
 
@@ -374,13 +376,12 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
       if (error) {
         console.error('Error adding rich task to Supabase:', error);
-        return;
+        // Mark task as failed (keep it visible with error indicator, allow retry)
+        set({ tasks: get().tasks.map(t => t.id === newTask.id ? { ...t, saveError: true } : t) });
+        throw error;
       }
-      await get().loadTasks(userId);
-    } else {
-      const tasks = [...get().tasks, newTask];
-      set({ tasks });
-      saveLocalTasks(tasks);
+      // Sync with Supabase in background (don't block UI)
+      get().loadTasks(userId);
     }
   },
 
@@ -471,6 +472,26 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     } else {
       const tasks = get().tasks.map(task =>
         ids.includes(task.id) ? { ...task, status: 'completed' as TaskStatus, completedAt } : task,
+      );
+      set({ tasks });
+      saveLocalTasks(tasks);
+    }
+  },
+
+  bulkUndo: async (ids: string[], userId?: string) => {
+    if (userId) {
+      for (const id of ids) {
+        if (!isValidUUID(id)) continue;
+        await supabase
+          .from('tasks')
+          .update({ status: 'active', completed_at: null })
+          .eq('id', id)
+          .eq('user_id', userId);
+      }
+      await get().loadTasks(userId);
+    } else {
+      const tasks = get().tasks.map(task =>
+        ids.includes(task.id) ? { ...task, status: 'active' as TaskStatus, completedAt: undefined } : task,
       );
       set({ tasks });
       saveLocalTasks(tasks);
@@ -833,7 +854,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     } else {
 
       const tasks = getLocalTasks();
-
       set({ tasks, loading: false });
     }
   },
@@ -872,5 +892,42 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     if (userId && isValidUUID(id)) {
       await supabase.from('tasks').update({ status: 'active' }).eq('id', id).eq('user_id', userId);
     }
+  },
+
+  // ── retryTask: attempt to re-save a failed task (saveError: true) to Supabase ──
+  retryTask: async (id: string, userId?: string) => {
+    const task = get().tasks.find(t => t.id === id);
+    if (!task || !userId) return;
+
+    const { error } = await supabase
+      .from('tasks')
+      .insert([{
+        id: task.id,
+        text: task.text,
+        title: task.title ?? null,
+        description: task.description ?? null,
+        due_date: task.dueDate ?? null,
+        priority: task.priority ?? null,
+        category: task.category ?? null,
+        workspace: task.workspace ?? null,
+        repeat: task.repeat ?? null,
+        tags: task.tags ?? null,
+        notes: task.notes ?? null,
+        subtasks: task.subtasks ? JSON.stringify(task.subtasks) : '[]',
+        status: task.status,
+        is_template: false,
+        user_id: userId,
+        created_at: task.createdAt,
+      }]);
+
+    if (error) {
+      console.error('Retry failed:', error);
+      // Keep saveError: true so the indicator stays visible
+      return;
+    }
+
+    // Success: clear the error flag
+    set({ tasks: get().tasks.map(t => t.id === id ? { ...t, saveError: false } : t) });
+    get().loadTasks(userId);
   },
 }));

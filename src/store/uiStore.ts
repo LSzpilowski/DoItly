@@ -177,7 +177,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   categoriesByWorkspace: _initAllCats,
 
   // ── Navigation ──
-  setView: (view) => set({ currentView: view, currentCategory: null }),
+  setView: (view) => set({ currentView: view, currentCategory: null, selectedTasks: new Set<string>() }),
   setCategory: (category) =>
     set({ currentView: 'category', currentCategory: category }),
 

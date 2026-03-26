@@ -14,6 +14,7 @@ import {
 import { useTasksStore, getISOWeekString, type Task } from "@/store/tasksStore";
 import { useUIStore } from "@/store/uiStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
+import type { Priority } from "@/store/types";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function localDateStr(d: Date): string {
@@ -21,6 +22,36 @@ function localDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+const TODAY_D = new Date();
+TODAY_D.setHours(0, 0, 0, 0);
+
+function isOverdue(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return d < TODAY_D;
+}
+
+function dueDateLabel(dateStr?: string): string | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  if (d.getTime() === TODAY_D.getTime()) return "Today";
+  const diff = Math.round((d.getTime() - TODAY_D.getTime()) / 86400000);
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff < 0) return `${Math.abs(diff)}d overdue`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function sortByDueDate(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
 }
 
 function getWeekDays(): { dateStr: string; label: string; shortLabel: string; isToday: boolean }[] {
@@ -45,7 +76,92 @@ function getWeekDays(): { dateStr: string; label: string; shortLabel: string; is
   });
 }
 
-// ─── Shared mini task card ────────────────────────────────────────────────────
+// ─── Full-size task card (matches Day/Month planners) ───────────────────────────────
+interface TaskCardProps {
+  task: Task;
+  dragging?: boolean;
+}
+
+const TaskCard = ({ task, dragging }: TaskCardProps) => {
+  const label = task.title ?? task.text;
+  const due = dueDateLabel(task.dueDate);
+  const overdue = task.dueDate ? isOverdue(task.dueDate) : false;
+
+  return (
+    <div
+      className={`group flex items-start justify-between gap-2 px-3 py-2.5 rounded-xl border bg-card transition-all ${
+        dragging
+          ? "opacity-50 shadow-lg border-primary/40"
+          : "border-border hover:border-border/80 hover:shadow-sm"
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{label}</p>
+        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+          {task.category && (
+            <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">
+              {task.category}
+            </span>
+          )}
+          {due && (
+            <span
+              className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
+                overdue
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                  : due === "Today"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {due}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DraggableTaskCard = ({ task }: { task: Task }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    >
+      <TaskCard task={task} dragging={isDragging} />
+    </div>
+  );
+};
+
+// ─── Priority pool box (matches Day/Month planners) ─────────────────────────────
+interface PriorityBoxProps {
+  title: string;
+  tasks: Task[];
+  accentClass: string;
+  dotClass: string;
+}
+
+const PriorityBox = ({ title, tasks, accentClass, dotClass }: PriorityBoxProps) => (
+  <div className="rounded-2xl border border-border bg-card flex flex-col min-h-[180px]">
+    <div className="px-4 py-3 border-b border-border/60 flex items-center gap-2">
+      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotClass}`} />
+      <h3 className={`text-sm font-bold ${accentClass}`}>{title}</h3>
+      <span className="ml-auto text-xs text-muted-foreground">{tasks.length}</span>
+    </div>
+    <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-80">
+      {tasks.length === 0 ? (
+        <p className="text-xs text-muted-foreground/50 py-4 text-center">No tasks</p>
+      ) : (
+        tasks.map((t) => <DraggableTaskCard key={t.id} task={t} />)
+      )}
+    </div>
+  </div>
+);
+
+// ─── Mini card inside day columns (compact) ───────────────────────────────────
 interface MiniCardProps {
   task: Task;
   dragging?: boolean;
@@ -186,7 +302,7 @@ export const WeekPlanningView = () => {
   );
 
   const activeTasks = useMemo(
-    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress") && !t.isTemplate),
+    () => tasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate),
     [tasks]
   );
 
@@ -203,26 +319,19 @@ export const WeekPlanningView = () => {
     return map;
   }, [activeTasks, weekDateStrs, weekStart, weekEnd]);
 
-  // Planned IDs = any task that appears in a day column
-  const plannedThisWeekIds = useMemo(() => {
-    const ids = new Set<string>();
-    weekDateStrs.forEach((dateStr) => {
-      dayTasksMap[dateStr]?.forEach((t) => ids.add(t.id));
-    });
-    return ids;
-  }, [dayTasksMap, weekDateStrs]);
-
-  const unplanned = useMemo(
-    () => activeTasks.filter((t) => !plannedThisWeekIds.has(t.id)),
-    [activeTasks, plannedThisWeekIds]
+  // Pool: only tasks without a dueDate OR overdue — so users can plan/reschedule them
+  // Pool: only tasks without a dueDate — so users can plan/schedule them
+  const pool = useMemo(
+    () => activeTasks.filter((t) => !t.dueDate),
+    [activeTasks]
   );
 
   const buckets = useMemo(() => ({
-    high:   unplanned.filter((t) => t.priority === "high"),
-    medium: unplanned.filter((t) => t.priority === "medium"),
-    low:    unplanned.filter((t) => t.priority === "low"),
-    none:   unplanned.filter((t) => !t.priority),
-  }), [unplanned]);
+    high:   sortByDueDate(pool.filter((t) => t.priority === "high"   as Priority)),
+    medium: sortByDueDate(pool.filter((t) => t.priority === "medium" as Priority)),
+    low:    sortByDueDate(pool.filter((t) => t.priority === "low"    as Priority)),
+    none:   sortByDueDate(pool.filter((t) => !t.priority)),
+  }), [pool]);
 
   const activeTask = useMemo(
     () => activeTasks.find((t) => t.id === activeId) ?? null,
@@ -289,19 +398,30 @@ export const WeekPlanningView = () => {
           ))}
         </div>
 
-        {/* Unplanned pool — hide empty boxes */}
+        {/* Pool: unscheduled & overdue — drag to a day */}
         <div>
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Unplanned tasks — drag to a day
+            All active tasks — drag to add to a day
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {buckets.high.length > 0 && <PoolBox title="Must have"    tasks={buckets.high}   accentClass="text-red-600 dark:text-red-400"    dotClass="bg-red-500" />}
-            {buckets.medium.length > 0 && <PoolBox title="Should have"  tasks={buckets.medium} accentClass="text-amber-600 dark:text-amber-400" dotClass="bg-amber-500" />}
-            {buckets.low.length > 0 && <PoolBox title="Nice to have" tasks={buckets.low}    accentClass="text-green-600 dark:text-green-400" dotClass="bg-green-500" />}
-            {buckets.none.length > 0 && <PoolBox title="No Priority"  tasks={buckets.none}   accentClass="text-muted-foreground"              dotClass="bg-muted-foreground/40" />}
+          {/* Mobile carousel */}
+          <div className="flex sm:hidden gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+            {buckets.high.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityBox title="Must have"    tasks={buckets.high}   accentClass="text-red-600 dark:text-red-400"    dotClass="bg-red-500" /></div>}
+            {buckets.medium.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityBox title="Should have"  tasks={buckets.medium} accentClass="text-amber-600 dark:text-amber-400" dotClass="bg-amber-500" /></div>}
+            {buckets.low.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityBox title="Nice to have" tasks={buckets.low}    accentClass="text-green-600 dark:text-green-400" dotClass="bg-green-500" /></div>}
+            {buckets.none.length > 0 && <div className="flex-shrink-0 w-[85vw] snap-start"><PriorityBox title="No Priority"  tasks={buckets.none}   accentClass="text-muted-foreground"              dotClass="bg-muted-foreground/40" /></div>}
             {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
-              <div className="sm:col-span-2 lg:col-span-4 text-center py-6 text-sm text-muted-foreground/60">
-                All tasks are assigned to days
+              <div className="w-full text-center py-6 text-sm text-muted-foreground/60">All tasks are scheduled</div>
+            )}
+          </div>
+          {/* Desktop grid */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+            {buckets.high.length > 0 && <PriorityBox title="Must have"    tasks={buckets.high}   accentClass="text-red-600 dark:text-red-400"    dotClass="bg-red-500" />}
+            {buckets.medium.length > 0 && <PriorityBox title="Should have"  tasks={buckets.medium} accentClass="text-amber-600 dark:text-amber-400" dotClass="bg-amber-500" />}
+            {buckets.low.length > 0 && <PriorityBox title="Nice to have" tasks={buckets.low}    accentClass="text-green-600 dark:text-green-400" dotClass="bg-green-500" />}
+            {buckets.none.length > 0 && <PriorityBox title="No Priority"  tasks={buckets.none}   accentClass="text-muted-foreground"              dotClass="bg-muted-foreground/40" />}
+            {buckets.high.length === 0 && buckets.medium.length === 0 && buckets.low.length === 0 && buckets.none.length === 0 && (
+              <div className="sm:col-span-3 text-center py-6 text-sm text-muted-foreground/60">
+                All tasks are scheduled
               </div>
             )}
           </div>
@@ -309,7 +429,7 @@ export const WeekPlanningView = () => {
       </div>
 
       <DragOverlay>
-        {activeTask && <MiniCard task={activeTask} />}
+        {activeTask && <TaskCard task={activeTask} />}
       </DragOverlay>
     </DndContext>
   );

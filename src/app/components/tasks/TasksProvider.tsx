@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useTasksStore } from '@/store/tasksStore';
-
 // Returns milliseconds until next midnight (local time)
 function msUntilMidnight(): number {
   const now = new Date();
@@ -13,7 +12,7 @@ function msUntilMidnight(): number {
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   const { user, initialized } = useAuthStore();
-  const { loadTasks, clearTasks, tasks, markOverdue } = useTasksStore();
+  const { loadTasks, tasks, markOverdue } = useTasksStore();
 
   // Keep a stable ref to markOverdue so our timers don't capture stale closure
   const markOverdueRef = useRef(markOverdue);
@@ -25,17 +24,30 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     tasksRef.current = tasks;
   });
 
+  // Immediate guest load: on first mount, if no user session in localStorage,
+  // load local tasks right away without waiting for Supabase auth to resolve.
+  // This prevents the UI from being empty while Supabase initializes.
   useEffect(() => {
-    if (!initialized) {
-      return;
+    const hasSupabaseSession =
+      typeof window !== 'undefined' &&
+      Object.keys(localStorage).some((k) => k.startsWith('sb-') && k.includes('-auth-token'));
+    if (!hasSupabaseSession) {
+      loadTasks(undefined);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auth-aware load: re-loads tasks whenever auth state resolves/changes.
+  // For authenticated users this replaces the local tasks with Supabase data.
+  useEffect(() => {
+    if (!initialized) return;
     if (user) {
       loadTasks(user.id);
     } else {
-      // Logged out — show only local (anonymous) tasks, not Supabase data
-      clearTasks();
+      // Re-load local tasks in case auth state changed (e.g. signed out)
+      loadTasks(undefined);
     }
-  }, [user, initialized, loadTasks, clearTasks]);
+  }, [user, initialized, loadTasks]);
 
   // ── Overdue sweep ─────────────────────────────────────────────────────────
   // Run on mount + whenever tasks change (covers page reload).

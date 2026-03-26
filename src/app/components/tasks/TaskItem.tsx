@@ -56,7 +56,7 @@ interface TaskItemProps {
 }
 
 export const TaskItem = ({ task }: TaskItemProps) => {
-  const { markAsCompleted, deleteTask, undoTask, updateTaskRich } = useTasksStore();
+  const { markAsCompleted, deleteTask, undoTask, updateTaskRich, retryTask } = useTasksStore();
   const { toggleTaskSelect, selectedTasks, openTaskModal, showNotification, categories } = useUIStore();
   const { user } = useAuthStore();
 
@@ -165,6 +165,20 @@ export const TaskItem = ({ task }: TaskItemProps) => {
           }`}
         >
           {displayTitle}
+          {task.saveError && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); retryTask(task.id, user?.id); }}
+              title="Task not saved. Click to retry."
+              className="inline-flex items-center justify-center ml-1.5 align-middle w-4 h-4 rounded-sm flex-shrink-0 text-amber-400 hover:text-amber-300 transition-colors"
+              aria-label="Task not saved. Click to retry."
+            >
+              {/* Warning triangle with exclamation mark */}
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                <path d="M12 2.5L1.5 21.5h21L12 2.5zm0 3.5l8.5 14.5h-17L12 6zm-1 5v4h2v-4h-2zm0 5v2h2v-2h-2z" />
+              </svg>
+            </button>
+          )}
         </p>
 
         {/* Description */}

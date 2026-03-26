@@ -119,6 +119,7 @@ const TaskModalInner = ({
   const [subtaskInput, setSubtaskInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
   const subtaskSensors = useSensors(
@@ -195,7 +196,13 @@ const TaskModalInner = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    await onSubmit(form);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(form);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -490,9 +497,16 @@ const TaskModalInner = ({
           <div className="flex gap-2 pt-2 pb-1">
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 cursor-pointer"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isEditing ? "Save Changes" : "Create Task"}
+              {isSubmitting && (
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V0a12 12 0 00-12 12h4z" />
+                </svg>
+              )}
+              {isSubmitting ? (isEditing ? "Saving…" : "Creating…") : (isEditing ? "Save Changes" : "Create Task")}
             </button>
             <button
               type="button"
@@ -566,31 +580,35 @@ export const TaskModal = () => {
     : EMPTY;
 
   const handleSubmit = async (form: TaskFormState) => {
-    if (liveEditingTask) {
-      await updateTaskRich(
-        liveEditingTask.id,
-        {
-          title: form.title,
-          text: form.title,
-          description: form.description || undefined,
-          dueDate: form.dueDate || undefined,
-          // overdue is auto-resolved by updateTaskRich based on dueDate
-          priority: form.priority,
-          workspace: form.workspace || undefined,
-          category: form.category || undefined,
-          repeat: form.repeat,
-          tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-          notes: form.notes || undefined,
-          subtasks: form.subtasks,
-        },
-        user?.id,
-      );
-      showNotification("Task updated!", "success");
-    } else {
-      await addTaskRich(form, user?.id);
-      showNotification("Task created!", "success");
-    }
     closeAllModals();
+    try {
+      if (liveEditingTask) {
+        await updateTaskRich(
+          liveEditingTask.id,
+          {
+            title: form.title,
+            text: form.title,
+            description: form.description || undefined,
+            dueDate: form.dueDate || undefined,
+            // overdue is auto-resolved by updateTaskRich based on dueDate
+            priority: form.priority,
+            workspace: form.workspace || undefined,
+            category: form.category || undefined,
+            repeat: form.repeat,
+            tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+            notes: form.notes || undefined,
+            subtasks: form.subtasks,
+          },
+          user?.id,
+        );
+        showNotification("Task updated!", "success");
+      } else {
+        await addTaskRich(form, user?.id);
+        showNotification("Task created!", "success");
+      }
+    } catch {
+      showNotification("Failed to save task. Please try again.", "error");
+    }
   };
 
   // Key includes a hash of the live task's mutable fields so the inner

@@ -27,7 +27,6 @@ const PATH_TO_VIEW: Record<string, View> = {
   "all": "all",
   "today": "today",
   "this-week": "thisWeek",
-  "calendar": "calendar",
   "completed": "completed",
   "overdue": "overdue",
   "planner": "planDay",
@@ -38,7 +37,6 @@ const VIEW_TO_PATH: Record<View, string> = {
   all: "/all",
   today: "/today",
   thisWeek: "/this-week",
-  calendar: "/calendar",
   completed: "/completed",
   overdue: "/overdue",
   planDay: "/planner",
@@ -66,7 +64,7 @@ export default function App() {
 
   // On mount: read URL and set view accordingly
   useEffect(() => {
-    const segment = location.pathname.replace("/", "").split("/")[0] || "today";
+    const segment = location.pathname.replace("/", "").split("/")[0] || "all";
     const view = PATH_TO_VIEW[segment];
     if (view && view !== currentView) {
       setView(view);
@@ -76,7 +74,7 @@ export default function App() {
 
   // When view changes: update URL (except category view which is internal)
   useEffect(() => {
-    const targetPath = VIEW_TO_PATH[currentView] ?? "/today";
+    const targetPath = VIEW_TO_PATH[currentView] ?? "/all";
     if (currentView !== "category" && location.pathname !== targetPath) {
       navigate(targetPath, { replace: true });
     }
@@ -85,8 +83,8 @@ export default function App() {
   // Redirect away from Overdue view when there are no overdue tasks
   useEffect(() => {
     if (currentView === "overdue" && overdueCount === 0) {
-      setView("today");
-      navigate("/today", { replace: true });
+      setView("all");
+      navigate("/all", { replace: true });
     }
   }, [currentView, overdueCount, setView, navigate]);
 
@@ -116,7 +114,7 @@ export default function App() {
         {/* Content area */}
         <main className="flex-1 min-w-0 flex flex-col px-4 md:px-6 py-4 md:py-6 pb-24 md:pb-6">
           {/* Toolbar row: Templates + History (desktop) — hidden on planner views */}
-          {currentView !== "planDay" && currentView !== "planWeek" && (
+          {currentView !== "planDay" && currentView !== "planWeek" && currentView !== "planMonth" && (
             <div className="hidden md:flex items-center gap-3 mb-4">
               <TemplateSheet />
               <TasksHistory
@@ -128,8 +126,8 @@ export default function App() {
           )}
 
           {/* Main content */}
-          {currentView === "planDay" || currentView === "planWeek" ? (
-            <PlannerShell initialTab={currentView === "planWeek" ? "week" : "day"} />
+          {currentView === "planDay" || currentView === "planWeek" || currentView === "planMonth" ? (
+            <PlannerShell initialTab={currentView === "planWeek" ? "week" : currentView === "planMonth" ? "month" : "day"} />
           ) : (
             <TaskList />
           )}
