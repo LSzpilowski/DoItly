@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { AuthComponent } from './AuthComponent';
+import { Footer } from "@/app/components/footer";
 import {
   Sheet,
   SheetContent,
@@ -37,16 +38,18 @@ export function AuthSheet({ open: controlledOpen, onOpenChange }: AuthSheetProps
           </Button>
         </SheetTrigger>
       )}
-      <SheetContent className='bg-background'>
-        <SheetHeader>
+      <SheetContent side="right" className="max-h-screen w-full sm:max-w-lg overflow-y-auto bg-background flex flex-col">
+        <SheetHeader className="text-center">
           <SheetTitle>Welcome to DoItly</SheetTitle>
           <SheetDescription>
             Sign in to sync your tasks across devices
           </SheetDescription>
-        </SheetHeader>
-        <div className="mt-6">
+          <div className="flex-1 flex items-center justify-center py-8">
           <AuthComponent />
-        </div>
+          </div>
+        </SheetHeader>
+        
+        <Footer />
       </SheetContent>
     </Sheet>
   );

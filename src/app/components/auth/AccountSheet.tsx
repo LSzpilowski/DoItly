@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/app/components/footer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { User, TrendingUp, CheckCircle, ListTodo, Archive, FileText, Calendar, LogOut, Trash2, Download, Timer, BarChart2 } from "lucide-react";
 import {
@@ -447,30 +448,7 @@ export const AccountSheet: React.FC<AccountSheetProps> = ({ open: controlledOpen
         </div>
 
         {/* Footer — links at the bottom of the account sheet */}
-        <div className="mt-8 pt-4 border-t border-border/40 flex flex-col items-center gap-2 text-sm text-muted-foreground">
-          <p className="flex items-center gap-1">
-            DoItly by
-            <a
-              className="font-semibold text-primary hover:underline transition-all hover:opacity-80"
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://lszpilowski.com"
-            >
-              LSzpilowski
-            </a>
-          </p>
-          <div className="flex items-center gap-3 text-xs">
-            <p>© {new Date().getFullYear()} DoItly. All rights reserved.</p>
-            <span>•</span>
-            <PrivacyPolicyModal>
-              <button className="text-primary hover:underline transition-all">Privacy Policy</button>
-            </PrivacyPolicyModal>
-            <span>•</span>
-            <GDPRModal>
-              <button className="text-primary hover:underline transition-all">GDPR</button>
-            </GDPRModal>
-          </div>
-        </div>
+        <Footer />
       </SheetContent>
     </Sheet>
   );
