@@ -184,10 +184,13 @@ const TaskModalInner = ({
     if (form.title.length > 150) e.title = "Title too long (max 150 characters)";
     if (form.description.length > 1000) e.description = "Description too long (max 1000 characters)";
     if (form.notes.length > 2000) e.notes = "Notes too long (max 2000 characters)";
-    // Repeat requires due date
-    const hasDue = !!form.dueDate;
-    if (form.repeat !== "none" && !hasDue) {
-      e.dueDate = "Due Date required when Repeat is set";
+    if (form.repeat !== "none") {
+      if (!form.startDate) {
+        e.startDate = "Start Date is required when Repeat is set";
+      }
+      if (form.startDate && form.repeatEndDate && form.repeatEndDate < form.startDate) {
+        e.repeatEndDate = "End Date must be on or after Start Date";
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -282,7 +285,8 @@ const TaskModalInner = ({
             </div>
           </div>
 
-          {/* Due Date */}
+          {/* Due Date — hidden when repeat is active (auto-set per instance) */}
+          {form.repeat === "none" && (
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Due Date</label>
             <div className="flex items-center gap-2">
@@ -307,6 +311,54 @@ const TaskModalInner = ({
             </div>
             {errors.dueDate && <p className="text-xs text-red-500 mt-1">{errors.dueDate}</p>}
           </div>
+          )}
+
+          {/* Start Date + End Date — only when repeat is active */}
+          {form.repeat !== "none" && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1">
+                Start Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setField("startDate", e.target.value)}
+                className={`w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.startDate ? "border-red-500" : "border-input"}`}
+              />
+              {errors.startDate
+                ? <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>
+                : <p className="text-xs text-muted-foreground mt-1">First occurrence</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1">End Date</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={form.repeatEndDate}
+                  min={form.startDate || undefined}
+                  onChange={(e) => setField("repeatEndDate", e.target.value)}
+                  className={`flex-1 px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.repeatEndDate ? "border-red-500" : "border-input"}`}
+                />
+                {form.repeatEndDate && (
+                  <button
+                    type="button"
+                    onClick={() => setField("repeatEndDate", "")}
+                    className="flex-shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    aria-label="Clear end date"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {errors.repeatEndDate
+                ? <p className="text-xs text-red-500 mt-1">{errors.repeatEndDate}</p>
+                : <p className="text-xs text-muted-foreground mt-1">Empty = repeats forever</p>}
+            </div>
+          </div>
+          )}
 
           {/* Row: Workspace + Category */}
           <div className="grid grid-cols-2 gap-3">
@@ -371,7 +423,7 @@ const TaskModalInner = ({
                 ))}
               </select>
               {form.repeat !== "none" && (
-                <p className="text-xs text-amber-500 mt-1">Start & Due Date required</p>
+                <p className="text-xs text-primary/70 mt-1">Set Start Date below ↓</p>
               )}
             </div>
           </div>
@@ -551,6 +603,8 @@ export const TaskModal = () => {
     title: "",
     description: "",
     dueDate: "",
+    startDate: "",
+    repeatEndDate: "",
     priority: "medium",
     workspace: activeWorkspaceName,
     category: categories[0]?.name ?? "",
@@ -569,6 +623,8 @@ export const TaskModal = () => {
         title: prefillSource.title ?? prefillSource.text ?? "",
         description: prefillSource.description ?? "",
         dueDate: prefillSource.dueDate ?? "",
+        startDate: prefillSource.startDate ?? "",
+        repeatEndDate: prefillSource.repeatEndDate ?? "",
         priority: prefillSource.priority ?? "medium",
         workspace: prefillSource.workspace ?? (workspaces[0]?.name ?? ""),
         category: prefillSource.category ?? (categories[0]?.name ?? ""),
@@ -595,6 +651,8 @@ export const TaskModal = () => {
             workspace: form.workspace || undefined,
             category: form.category || undefined,
             repeat: form.repeat,
+            startDate: form.repeat !== "none" ? (form.startDate || undefined) : undefined,
+            repeatEndDate: form.repeat !== "none" ? (form.repeatEndDate || undefined) : undefined,
             tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
             notes: form.notes || undefined,
             subtasks: form.subtasks,
