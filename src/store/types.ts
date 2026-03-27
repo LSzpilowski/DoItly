@@ -31,9 +31,6 @@ export type TaskFormState = {
   title: string;
   description: string;
   dueDate: string;
-  // ── Repeat fields (only relevant when repeat !== 'none') ──
-  startDate: string;       // first occurrence / cycle start (YYYY-MM-DD)
-  repeatEndDate: string;   // last occurrence / end of cycle (YYYY-MM-DD), empty = infinite
   priority: Priority;
   workspace: string;
   category: string;

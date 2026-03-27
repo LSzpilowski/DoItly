@@ -21,10 +21,6 @@ export interface Task {
   priority?: Priority;
   category?: string;
   repeat?: Repeat;
-  // ── Repeat-only fields ──
-  startDate?: string;     // YYYY-MM-DD — first occurrence / cycle start
-  repeatEndDate?: string; // YYYY-MM-DD — last occurrence / end of cycle (undefined = infinite)
-  templateId?: string;    // UUID — for instances: ID of the template task that generated this
   tags?: string[];
   notes?: string;
   subtasks?: Subtask[];
@@ -334,8 +330,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       category: form.category,
       workspace: form.workspace || undefined,
       repeat: form.repeat,
-      startDate: form.repeat !== 'none' ? (form.startDate || undefined) : undefined,
-      repeatEndDate: form.repeat !== 'none' ? (form.repeatEndDate || undefined) : undefined,
       tags: tags.length > 0 ? tags : undefined,
       notes: form.notes || undefined,
       subtasks: form.subtasks.length > 0 ? form.subtasks : undefined,
@@ -371,8 +365,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
           category: newTask.category ?? null,
           workspace: newTask.workspace ?? null,
           repeat: newTask.repeat ?? null,
-          start_date: newTask.startDate ?? null,
-          repeat_end_date: newTask.repeatEndDate ?? null,
           tags: newTask.tags ?? null,
           notes: newTask.notes ?? null,
           subtasks: newTask.subtasks ? JSON.stringify(newTask.subtasks) : '[]',
@@ -440,8 +432,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       if (resolvedUpdates.category     !== undefined) supabaseUpdates.category    = resolvedUpdates.category ?? null;
       if (resolvedUpdates.workspace    !== undefined) supabaseUpdates.workspace   = resolvedUpdates.workspace ?? null;
       if (resolvedUpdates.repeat       !== undefined) supabaseUpdates.repeat      = resolvedUpdates.repeat ?? null;
-      if ('startDate' in resolvedUpdates)     supabaseUpdates.start_date      = resolvedUpdates.startDate ?? null;
-      if ('repeatEndDate' in resolvedUpdates) supabaseUpdates.repeat_end_date = resolvedUpdates.repeatEndDate ?? null;
       if (resolvedUpdates.tags         !== undefined) supabaseUpdates.tags        = resolvedUpdates.tags ?? null;
       if (resolvedUpdates.notes        !== undefined) supabaseUpdates.notes       = resolvedUpdates.notes ?? null;
       if (resolvedUpdates.subtasks     !== undefined) supabaseUpdates.subtasks    = JSON.stringify(resolvedUpdates.subtasks ?? []);
@@ -843,9 +833,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         category: t.category ?? undefined,
         workspace: t.workspace ?? undefined,
         repeat: t.repeat ?? undefined,
-        startDate: t.start_date ?? undefined,
-        repeatEndDate: t.repeat_end_date ?? undefined,
-        templateId: t.template_id ?? undefined,
         tags: t.tags ?? undefined,
         notes: t.notes ?? undefined,
         subtasks: t.subtasks ? (typeof t.subtasks === 'string' ? JSON.parse(t.subtasks) : t.subtasks) : undefined,

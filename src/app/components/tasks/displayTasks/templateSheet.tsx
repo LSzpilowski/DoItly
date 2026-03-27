@@ -48,8 +48,6 @@ const EMPTY_FORM: TaskFormState = {
   title: "",
   description: "",
   dueDate: "",
-  startDate: "",
-  repeatEndDate: "",
   priority: "medium",
   workspace: "",
   category: "",
