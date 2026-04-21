@@ -81,6 +81,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="/calendar" element={<App />} />
               <Route path="/completed" element={<App />} />
               <Route path="/overdue" element={<App />} />
+              <Route path="/habits" element={<App />} />
               <Route path="/planner" element={<App />} />
               <Route path="/planner-week" element={<App />} />
               <Route path="/auth/callback" element={<AuthCallback />} />

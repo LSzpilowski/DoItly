@@ -5,6 +5,7 @@ import { Sidebar } from "@/app/components/Sidebar";
 import { TaskList } from "@/app/components/tasks/TaskList";
 import { PlannerShell } from "@/app/components/PlannerShell";
 const TaskModal = lazy(() => import("@/app/components/modals/TaskModal").then(m => ({ default: m.TaskModal })));
+const HabitModal = lazy(() => import("@/app/components/modals/HabitModal").then(m => ({ default: m.HabitModal })));
 const SearchModal = lazy(() => import("@/app/components/modals/SearchModal").then(m => ({ default: m.SearchModal })));
 const FocusModal = lazy(() => import("@/app/components/modals/FocusModal").then(m => ({ default: m.FocusModal })));
 const SettingsModal = lazy(() => import("@/app/components/modals/SettingsModal").then(m => ({ default: m.SettingsModal })));
@@ -28,6 +29,7 @@ const PATH_TO_VIEW: Record<string, View> = {
   "this-week": "thisWeek",
   "completed": "completed",
   "overdue": "overdue",
+  "habits": "habits",
   "planner": "planDay",
   "planner-week": "planWeek",
 };
@@ -38,6 +40,7 @@ const VIEW_TO_PATH: Record<View, string> = {
   thisWeek: "/this-week",
   completed: "/completed",
   overdue: "/overdue",
+  habits: "/habits",
   planDay: "/planner",
   planWeek: "/planner-week",
   planMonth: "/planner",
@@ -136,6 +139,7 @@ export default function App() {
       {/* Modals */}
       <Suspense fallback={null}>
         <TaskModal />
+        <HabitModal />
         <SearchModal />
         <FocusModal />
         <SettingsModal />

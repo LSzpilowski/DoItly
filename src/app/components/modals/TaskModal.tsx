@@ -19,10 +19,9 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
-import type { Priority, Repeat, TaskFormState, Subtask } from "@/store/types";
+import type { Priority, TaskFormState, Subtask } from "@/store/types";
 
 const PRIORITIES: Priority[] = ["low", "medium", "high"];
-const REPEATS: Repeat[] = ["none", "daily", "weekly", "monthly"];
 
 const PRIORITY_LABELS: Record<Priority, string> = {
   low: "Nice to have",
@@ -148,9 +147,11 @@ const TaskModalInner = ({
     .map((t) => t.trim())
     .filter(Boolean);
 
+  const MAX_TAGS = 5;
+
   const addTag = () => {
     const trimmed = tagInput.trim().replace(/^#/, "");
-    if (!trimmed || tagList.includes(trimmed)) { setTagInput(""); return; }
+    if (!trimmed || tagList.includes(trimmed) || tagList.length >= MAX_TAGS) { setTagInput(""); return; }
     setField("tags", [...tagList, trimmed].join(", "));
     setTagInput("");
   };
@@ -184,11 +185,6 @@ const TaskModalInner = ({
     if (form.title.length > 150) e.title = "Title too long (max 150 characters)";
     if (form.description.length > 1000) e.description = "Description too long (max 1000 characters)";
     if (form.notes.length > 2000) e.notes = "Notes too long (max 2000 characters)";
-    // Repeat requires due date
-    const hasDue = !!form.dueDate;
-    if (form.repeat !== "none" && !hasDue) {
-      e.dueDate = "Due Date required when Repeat is set";
-    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -282,32 +278,50 @@ const TaskModalInner = ({
             </div>
           </div>
 
-          {/* Due Date */}
-          <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Due Date</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={form.dueDate}
-                onChange={(e) => setField("dueDate", e.target.value)}
-                className={`w-full max-w-[180px] px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.dueDate ? "border-red-500" : "border-input"}`}
-              />
-              {form.dueDate && (
-                <button
-                  type="button"
-                  onClick={() => setField("dueDate", "")}
-                  className="flex-shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                  aria-label="Clear due date"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
+          {/* Row: Due Date + Priority */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1">Due Date</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => setField("dueDate", e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${errors.dueDate ? "border-red-500" : "border-input"}`}
+                />
+                {form.dueDate && (
+                  <button
+                    type="button"
+                    onClick={() => setField("dueDate", "")}
+                    className="flex-shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    aria-label="Clear due date"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {errors.dueDate && <p className="text-xs text-red-500 mt-1">{errors.dueDate}</p>}
             </div>
-            {errors.dueDate && <p className="text-xs text-red-500 mt-1">{errors.dueDate}</p>}
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-1">Priority</label>
+              <select
+                value={form.priority}
+                onChange={(e) => setField("priority", e.target.value as Priority)}
+                className="w-full px-3 pr-8 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring hover:cursor-pointer"
+              >
+                {PRIORITIES.map((p) => (
+                  <option className="hover:cursor-pointer" key={p} value={p}>
+                    {PRIORITY_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+              <div className={`text-xs mt-1 font-medium ${PRIORITY_COLORS[form.priority]}`}>
+                {PRIORITY_LABELS[form.priority]}
+              </div>
+            </div>
           </div>
-
           {/* Row: Workspace + Category */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -338,47 +352,14 @@ const TaskModalInner = ({
             </div>
           </div>
 
-          {/* Row: Priority + Repeat */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Priority</label>
-              <select
-                value={form.priority}
-                onChange={(e) => setField("priority", e.target.value as Priority)}
-                className="w-full px-3 pr-8 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring hover:cursor-pointer"
-              >
-                {PRIORITIES.map((p) => (
-                  <option className="hover:cursor-pointer" key={p} value={p}>
-                    {PRIORITY_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-              <div className={`text-xs mt-1 font-medium ${PRIORITY_COLORS[form.priority]}`}>
-                {PRIORITY_LABELS[form.priority]}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-foreground mb-1">Repeat</label>
-              <select
-                value={form.repeat}
-                onChange={(e) => setField("repeat", e.target.value as Repeat)}
-                className="w-full px-3 pr-8 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring hover:cursor-pointer"
-              >
-                {REPEATS.map((r) => (
-                  <option key={r} value={r}>
-                    {r.charAt(0).toUpperCase() + r.slice(1)}
-                  </option>
-                ))}
-              </select>
-              {form.repeat !== "none" && (
-                <p className="text-xs text-amber-500 mt-1">Start & Due Date required</p>
-              )}
-            </div>
-          </div>
-
           {/* Tags */}
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Tags</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-semibold text-foreground">Tags</label>
+              <span className={`text-xs ${tagList.length >= MAX_TAGS ? "text-amber-500" : "text-muted-foreground/50"}`}>
+                {tagList.length}/{MAX_TAGS}
+              </span>
+            </div>
             {/* Tag chips */}
             {tagList.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
@@ -401,27 +382,31 @@ const TaskModalInner = ({
                 ))}
               </div>
             )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); addTag(); }
-                  if (e.key === ",") { e.preventDefault(); addTag(); }
-                }}
-                maxLength={30}
-                placeholder="Type a tag and press Enter…"
-                className="flex-1 px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <button
-                type="button"
-                onClick={addTag}
-                className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm font-medium cursor-pointer"
-              >
-                + Add
-              </button>
-            </div>
+            {tagList.length < MAX_TAGS ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); addTag(); }
+                    if (e.key === ",") { e.preventDefault(); addTag(); }
+                  }}
+                  maxLength={30}
+                  placeholder="Type a tag and press Enter…"
+                  className="flex-1 px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={addTag}
+                  className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm font-medium cursor-pointer"
+                >
+                  + Add
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-amber-500">Maximum of {MAX_TAGS} tags reached.</p>
+            )}
           </div>
 
           {/* Notes */}
@@ -551,6 +536,8 @@ export const TaskModal = () => {
     title: "",
     description: "",
     dueDate: "",
+    startDate: "",
+    repeatEndDate: "",
     priority: "medium",
     workspace: activeWorkspaceName,
     category: categories[0]?.name ?? "",
@@ -569,10 +556,12 @@ export const TaskModal = () => {
         title: prefillSource.title ?? prefillSource.text ?? "",
         description: prefillSource.description ?? "",
         dueDate: prefillSource.dueDate ?? "",
+        startDate: "",
+        repeatEndDate: "",
         priority: prefillSource.priority ?? "medium",
         workspace: prefillSource.workspace ?? (workspaces[0]?.name ?? ""),
         category: prefillSource.category ?? (categories[0]?.name ?? ""),
-        repeat: prefillSource.repeat ?? "none",
+        repeat: "none",
         tags: prefillSource.tags ? prefillSource.tags.join(", ") : "",
         notes: prefillSource.notes ?? "",
         subtasks: prefillSource.subtasks ? [...prefillSource.subtasks] : [],
@@ -590,11 +579,13 @@ export const TaskModal = () => {
             text: form.title,
             description: form.description || undefined,
             dueDate: form.dueDate || undefined,
+            startDate: undefined,
+            repeatEndDate: undefined,
             // overdue is auto-resolved by updateTaskRich based on dueDate
             priority: form.priority,
             workspace: form.workspace || undefined,
             category: form.category || undefined,
-            repeat: form.repeat,
+            repeat: "none" as const,
             tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
             notes: form.notes || undefined,
             subtasks: form.subtasks,

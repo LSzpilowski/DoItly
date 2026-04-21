@@ -62,6 +62,8 @@ interface UIState {
   // Modal state
   modals: ModalState;
   editingTask: Task | null;
+  /** 'instance' = editing a single occurrence, 'series' = editing entire habit series, null = creating */
+  habitEditMode: 'instance' | 'series' | null;
 
   // Notifications
   notifications: AppNotification[];
@@ -85,6 +87,8 @@ interface UIState {
   setActiveWorkspaceId: (id: string) => void;
 
   openTaskModal: (task?: Task) => void;
+  openHabitModal: (task?: Task) => void;
+  openHabitSeriesModal: (task: Task) => void;
   openSearchModal: () => void;
   openFocusModal: () => void;
   openSettingsModal: () => void;
@@ -130,6 +134,7 @@ function saveSettings(settings: AppSettings) {
 
 const CLOSED_MODALS: ModalState = {
   task: false,
+  habit: false,
   search: false,
   focus: false,
   settings: false,
@@ -168,6 +173,7 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   modals: { ...CLOSED_MODALS },
   editingTask: null,
+  habitEditMode: null,
 
   notifications: [],
 
@@ -203,6 +209,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   // ── Modals ──
   openTaskModal: (task) =>
     set({ modals: { ...CLOSED_MODALS, task: true }, editingTask: task ?? null }),
+  openHabitModal: (task) =>
+    set({ modals: { ...CLOSED_MODALS, habit: true }, editingTask: task ?? null, habitEditMode: task ? 'instance' : null }),
+  openHabitSeriesModal: (task) =>
+    set({ modals: { ...CLOSED_MODALS, habit: true }, editingTask: task, habitEditMode: 'series' }),
   openSearchModal: () =>
     set({ modals: { ...CLOSED_MODALS, search: true } }),
   openFocusModal: () =>
@@ -212,7 +222,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   openWorkspaceModal: () =>
     set({ modals: { ...CLOSED_MODALS, workspace: true } }),
   closeAllModals: () =>
-    set({ modals: { ...CLOSED_MODALS }, editingTask: null }),
+    set({ modals: { ...CLOSED_MODALS }, editingTask: null, habitEditMode: null }),
 
   // ── Selection ──
   toggleTaskSelect: (id) => {
