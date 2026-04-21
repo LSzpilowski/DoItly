@@ -89,14 +89,23 @@ const TaskCard = ({ task, dragging }: TaskCardProps) => {
 
   return (
     <div
-      className={`group flex items-start justify-between gap-2 px-3 py-2.5 rounded-xl border bg-card transition-all ${
-        dragging
-          ? "opacity-50 shadow-lg border-primary/40"
-          : "border-border hover:border-border/80 hover:shadow-sm"
+      className={`group flex items-start justify-between gap-2 px-3 py-2.5 rounded-xl border transition-all ${
+        task.isHabit
+          ? dragging
+            ? "opacity-50 shadow-lg border-emerald-500/40 bg-emerald-500/5"
+            : "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 hover:shadow-sm"
+          : dragging
+          ? "opacity-50 shadow-lg border-primary/40 bg-card"
+          : "border-border bg-card hover:border-border/80 hover:shadow-sm"
       }`}
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{label}</p>
+        {task.isHabit && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 mb-0.5">
+            🔁 Habit
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 mt-1">
           {task.category && (
             <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">

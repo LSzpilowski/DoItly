@@ -5,7 +5,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { TaskItem } from "./TaskItem";
-import type { Task } from "@/store/tasksStore";
+import type { Task, HabitGroup } from "@/store/tasksStore";
 import type { Priority, SortField, View } from "@/store/types";
 import { getISOWeekString } from "@/store/tasksStore";
 
@@ -204,13 +204,153 @@ function WeekDayGroup({ dateStr, tasks }: { dateStr: string; tasks: Task[] }) {
   );
 }
 
+// ── HabitGroupItem: one card per habit series in the Habits view ────────────
+const REPEAT_LABELS: Record<string, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+};
+
+function HabitGroupItem({ group }: { group: HabitGroup }) {
+  const [open, setOpen] = useState(true);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const { deleteHabitInstances, tasks } = useTasksStore();
+  const { showNotification, openHabitSeriesModal } = useUIStore();
+  const { user } = useAuthStore();
+  const pct = Math.round(group.completionRate * 100);
+
+  const handleDeleteAll = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirmDeleteAll) { setConfirmDeleteAll(true); return; }
+    const rootTask = group.instances.find(t => !t.templateId) ?? group.instances[0];
+    if (!rootTask) return;
+    await deleteHabitInstances(group.habitId, 'all', rootTask.id, undefined, user?.id);
+    showNotification('Entire habit deleted', 'warning');
+    setConfirmDeleteAll(false);
+  };
+
+  return (
+    <div className="flex flex-col rounded-xl border border-emerald-500/20 bg-card">
+      {/* Header row */}
+      <div className="flex items-start gap-3 p-4 w-full">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-start gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+        >
+          <span className="text-lg mt-0.5 flex-shrink-0">🔁</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-foreground leading-snug">{group.title}</span>
+              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700/40 font-medium">
+                {REPEAT_LABELS[group.repeat] ?? group.repeat}
+              </span>
+              {group.overdueCount > 0 && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-red-900/60 text-red-300 border border-red-700/40 font-medium">
+                  {group.overdueCount} overdue
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground flex-shrink-0">
+                {group.completedCount}/{group.totalCount} · {pct}%
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {group.startDate}
+              {group.repeatEndDate ? ` · Until ${group.repeatEndDate}` : ' · No end date'}
+            </p>
+          </div>
+        </button>
+        {/* Group actions */}
+        <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+          {/* Edit series */}
+          {!confirmDeleteAll && (() => {
+            const rootTask = group.instances.find(t => !t.templateId) ?? group.instances[0];
+            return rootTask ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); openHabitSeriesModal(rootTask); }}
+                title="Edit habit series"
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            ) : null;
+          })()}
+          {confirmDeleteAll ? (
+            <>
+              <button
+                onClick={handleDeleteAll}
+                className="text-xs px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(false); }}
+                className="text-xs px-2 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleDeleteAll}
+              title="Delete entire habit series"
+              className="p-1.5 rounded-lg hover:bg-red-900/30 text-muted-foreground hover:text-red-400 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => setOpen(o => !o)}
+            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+            title={open ? 'Collapse' : 'Expand'}
+          >
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {/* Expanded instances */}
+      {open && (
+        <div className="border-t border-border/40 px-4 py-3 flex flex-col gap-2">
+          {group.instances.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-2">No occurrences yet</p>
+          ) : (
+            group.instances.map(task => (
+              <TaskItem key={task.id} task={task} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const TaskList = () => {
+  // habit filter: 'tasks' | 'habits' — used in views where both can coexist (Today, This Week, etc.)
+  const [habitFilter, setHabitFilter] = useState<'tasks' | 'habits' | null>(null);
+
   const {
     tasks: storeTasks,
     bulkComplete,
     bulkUndo,
     bulkDelete,
     bulkSetPriority,
+    getHabitGroups,
   } = useTasksStore();
 
   const {
@@ -225,6 +365,7 @@ export const TaskList = () => {
     toggleSortDir,
     showNotification,
     openTaskModal,
+    openHabitModal,
     activeWorkspaceId,
     setView,
   } = useUIStore();
@@ -258,16 +399,23 @@ export const TaskList = () => {
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
 
+    // Apply habitFilter on top of an already-filtered set (not used in All Tasks)
+    const applyHabitFilter = (base: Task[]) => {
+      if (habitFilter === 'tasks') return base.filter(t => !t.isHabit);
+      if (habitFilter === 'habits') return base.filter(t => t.isHabit);
+      return base;
+    };
+
     switch (currentView) {
       case "today":
-        return workspaceTasks.filter(
+        return applyHabitFilter(workspaceTasks.filter(
           (t) =>
             (t.status === "active" || t.status === "inProgress") &&
             !t.isTemplate &&
             t.dueDate === today,
-        );
+        ));
       case "completed":
-        return workspaceTasks.filter((t) => t.status === "completed");
+        return workspaceTasks.filter((t) => t.status === "completed" && !t.isHabit);
       case "thisWeek": {
         // Mon-Sun of current ISO week
         const now = new Date();
@@ -278,36 +426,44 @@ export const TaskList = () => {
         sun.setDate(mon.getDate() + 6);
         const monStr = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
         const sunStr = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}`;
-        return workspaceTasks
+        return applyHabitFilter(workspaceTasks
           .filter((t) => {
             if ((t.status !== 'active' && t.status !== 'overdue') || t.isTemplate) return false;
             return !!t.dueDate && t.dueDate >= monStr && t.dueDate <= sunStr;
           })
-          .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
+          .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')));
       }
       case "overdue":
-        return workspaceTasks.filter(
+        return applyHabitFilter(workspaceTasks.filter(
           (t) => t.status === "overdue" && !t.isTemplate,
-        );
+        ));
+      case "habits":
+        // Habits view uses habitGroups separately; return empty so task count shows 0
+        return [];
       case "category":
-        if (!currentCategory) return workspaceTasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate);
+        if (!currentCategory) return applyHabitFilter(workspaceTasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate));
         if (currentCategory.startsWith("#")) {
-          // Tag view: filter by tags array
           const tagName = currentCategory.slice(1);
-          return workspaceTasks.filter(
+          return applyHabitFilter(workspaceTasks.filter(
             (t) =>
               (t.status === "active" || t.status === "inProgress" || t.status === "overdue") &&
               !t.isTemplate &&
               (t.tags ?? []).some((tag) => tag.trim() === tagName),
-          );
+          ));
         }
-        return workspaceTasks.filter(
+        return applyHabitFilter(workspaceTasks.filter(
           (t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate && t.category === currentCategory,
-        );
+        ));
       default:
-        return workspaceTasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate);
+        // All Tasks: always show only tasks — habits live in the dedicated Habits view
+        return workspaceTasks.filter((t) => (t.status === "active" || t.status === "inProgress" || t.status === "overdue") && !t.isTemplate && !t.isHabit);
     }
-  }, [workspaceTasks, currentView, currentCategory]);
+  }, [workspaceTasks, currentView, currentCategory, habitFilter]);
+
+  // Habits view: one entry per series (always computed so it's ready on view switch)
+  const habitGroups = useMemo(() => {
+    return getHabitGroups();
+  }, [storeTasks, getHabitGroups]);
 
   const tasks = useMemo(() => sortTasks(rawTasks, sortField, sortDir), [rawTasks, sortField, sortDir]);
 
@@ -427,6 +583,7 @@ export const TaskList = () => {
       return `This Week — W${weekNum} · ${rangeLabel}`;
     }
     if (currentView === "overdue") return "Overdue";
+    if (currentView === "habits") return "Habits";
     return currentView.charAt(0).toUpperCase() + currentView.slice(1);
   }, [currentView, currentCategory]);
 
@@ -437,8 +594,14 @@ export const TaskList = () => {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-foreground">{viewLabel}</h2>
-          {tasks.length > 0 && (
-            <span className="text-sm text-muted-foreground">({tasks.length})</span>
+          {currentView === "habits" ? (
+            habitGroups.length > 0 && (
+              <span className="text-sm text-muted-foreground">({habitGroups.length})</span>
+            )
+          ) : (
+            tasks.length > 0 && (
+              <span className="text-sm text-muted-foreground">({tasks.length})</span>
+            )
           )}
         </div>
 
@@ -472,6 +635,27 @@ export const TaskList = () => {
           </button>
         </div>
       </div>
+
+      {/* Habit/Task filter chips — shown in views where habits can coexist with tasks (NOT in All Tasks) */}
+      {currentView !== "all" && currentView !== "habits" && currentView !== "completed" && (
+        <div className="flex items-center gap-1.5">
+          {([null, 'tasks', 'habits'] as const).map((f) => (
+            <button
+              key={f ?? 'all'}
+              onClick={() => setHabitFilter(f)}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                habitFilter === f
+                  ? f === 'habits'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : 'bg-primary/10 text-primary border-primary/30'
+                  : 'bg-transparent text-muted-foreground border-border hover:bg-accent'
+              }`}
+            >
+              {f === null ? 'All' : f === 'tasks' ? 'Tasks' : '🔁 Habits'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Overdue info bar — shown in Today and This Week */}
       {(currentView === "today" || currentView === "thisWeek") && overdueCount > 0 && !overdueBannerDismissed && (
@@ -590,7 +774,25 @@ export const TaskList = () => {
       )}
 
       {/* Task list */}
-      {tasks.length === 0 ? (
+      {currentView === "habits" ? (
+        // ── Habits: one card per series ────────────────────────────────────────
+        <div className="flex flex-col gap-3">
+          {habitGroups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <span className="text-4xl mb-3">🔁</span>
+              <p className="text-muted-foreground font-medium">No habits yet</p>
+              <button
+                onClick={() => openHabitModal()}
+                className="mt-3 text-sm text-primary hover:underline hover:cursor-pointer"
+              >
+                + Add your first habit
+              </button>
+            </div>
+          ) : (
+            habitGroups.map(g => <HabitGroupItem key={g.habitId} group={g} />)
+          )}
+        </div>
+      ) : tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <svg className="w-12 h-12 text-muted-foreground/30 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

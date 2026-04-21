@@ -64,7 +64,7 @@ const DraggableChip = ({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none border border-primary/20 transition-opacity ${
+      className={`group flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing touch-none select-none border transition-opacity ${task.isHabit ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" : "bg-primary/10 text-primary border-primary/20"} ${
         isDragging ? "opacity-30" : ""
       }`}
     >

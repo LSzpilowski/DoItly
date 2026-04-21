@@ -165,7 +165,7 @@ export default function StatisticsPage() {
     return Array.from({ length: days }, (_, i) => {
       const day = i + 1;
       const dateStr = `${prefix}-${String(day).padStart(2, "0")}`;
-      const nonTemplates = tasks.filter((t) => !t.isTemplate);
+      const nonTemplates = tasks.filter((t) => !t.isTemplate && !t.isHabit);
 
       return {
         label: String(day),
@@ -183,7 +183,7 @@ export default function StatisticsPage() {
   const yearlyData = useMemo((): ChartEntry[] => {
     return MONTHS_SHORT.map((monthLabel, mi) => {
       const prefix = `${selectedYear}-${String(mi + 1).padStart(2, "0")}`;
-      const nonTemplates = tasks.filter((t) => !t.isTemplate);
+      const nonTemplates = tasks.filter((t) => !t.isTemplate && !t.isHabit);
 
       return {
         label: monthLabel,
@@ -208,7 +208,7 @@ export default function StatisticsPage() {
   const completionRate = totalCreated > 0 ? Math.round((totalCompleted / totalCreated) * 100) : 0;
 
   // ── Pie chart — task status breakdown (all time) ──────────────────────────
-  const nonTemplates = tasks.filter((t) => !t.isTemplate);
+  const nonTemplates = tasks.filter((t) => !t.isTemplate && !t.isHabit);
   const pieData = [
     { name: "Active",    value: nonTemplates.filter((t) => t.status === "active" || t.status === "inProgress").length,    fill: PALETTE.created },
     { name: "Completed", value: nonTemplates.filter((t) => t.status === "completed").length, fill: PALETTE.completed },

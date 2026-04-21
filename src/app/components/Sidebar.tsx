@@ -203,6 +203,7 @@ export const Sidebar = () => {
     currentView, currentCategory,
     setView, setCategory,
     openTaskModal,
+    openHabitModal,
     categories, addCategory, removeCategory, renameCategory, reorderCategories,
     activeWorkspaceId,
   } = useUIStore();
@@ -251,11 +252,25 @@ export const Sidebar = () => {
     [tasks]
   );
 
+  const habitsCount = useMemo(
+    () => {
+      const habitIds = new Set(
+        tasks
+          .filter(t => t.isHabit && !t.isTemplate && t.status !== 'deleted' && t.status !== 'archived')
+          .map(t => t.templateId ?? t.id)
+      );
+      return habitIds.size;
+    },
+    [tasks]
+  );
+
   const tagCounts = useMemo<Map<string, number>>(() => {
     const map = new Map<string, number>();
     for (const t of tasks) {
       if (t.isTemplate) continue;
       if (t.status === "deleted" || t.status === "archived") continue;
+      // For habit instances, count only the root (no templateId) to avoid inflating count per series
+      if (t.isHabit && t.templateId) continue;
       for (const tag of t.tags ?? []) {
         const trimmed = tag.trim();
         if (trimmed) map.set(trimmed, (map.get(trimmed) ?? 0) + 1);
@@ -317,10 +332,22 @@ export const Sidebar = () => {
           Add Task
         </button>
 
+        {/* Add Habit */}
+        <button
+          onClick={() => openHabitModal()}
+          aria-label="Add new habit"
+          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-lg hover:shadow-emerald-500/20 transition-all duration-200 cursor-pointer"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Add Habit
+        </button>
+
         {/* Planner button */}
         <button
           onClick={() => setView("planDay" as View)}
-          className={`flex items-center gap-2 w-full px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer ${
+          className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer ${
             currentView === "planDay" || currentView === "planWeek"
               ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-purple-500/20"
               : "bg-gradient-to-r from-violet-500/80 to-purple-600/80 text-white hover:shadow-lg hover:shadow-purple-500/20"
@@ -383,6 +410,23 @@ export const Sidebar = () => {
               {overdueCount > 0 && (
                 <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 font-semibold">{overdueCount}</span>
               )}
+            </button>
+          )}
+          {!collapsed["views"] && (
+            <button
+              onClick={() => setView("habits" as View)}
+              aria-label="Go to Habits view"
+              aria-current={currentView === "habits" ? "page" : undefined}
+              className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                currentView === "habits"
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-500/10"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+              Habits
             </button>
           )}
         </div>

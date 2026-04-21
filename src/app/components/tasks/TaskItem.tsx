@@ -4,7 +4,56 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuthStore } from "@/store/authStore";
 import type { Subtask } from "@/store/types";
 
-// ── Badge helpers ────────────────────────────────────────────────────────────
+// ── HabitDeleteDialog: 3-option dialog for deleting habit instances ──────────
+interface HabitDeleteDialogProps {
+  onClose: () => void;
+  onConfirm: (mode: 'this' | 'future' | 'all') => void;
+}
+
+const HabitDeleteDialog = ({ onClose, onConfirm }: HabitDeleteDialogProps) => {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-card border border-border rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+        <h3 className="text-base font-bold text-foreground mb-1">Delete repeating habit</h3>
+        <p className="text-sm text-muted-foreground mb-5">
+          This task is part of a habit series. Which occurrences do you want to delete?
+        </p>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => onConfirm('this')}
+            className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-left border border-border hover:bg-accent transition-colors"
+          >
+            <span className="font-semibold text-foreground">This one only</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">Delete only this specific occurrence</span>
+          </button>
+          <button
+            onClick={() => onConfirm('future')}
+            className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-left border border-border hover:bg-accent transition-colors"
+          >
+            <span className="font-semibold text-foreground">This and all following</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">Delete this and all future occurrences</span>
+          </button>
+          <button
+            onClick={() => onConfirm('all')}
+            className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-left border border-red-500/30 hover:bg-red-500/10 transition-colors"
+          >
+            <span className="font-semibold text-red-500 dark:text-red-400">All occurrences</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">Delete the entire habit and all its instances</span>
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-4 w-full px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const PRIORITY_BADGE: Record<string, string> = {
   low: "bg-green-900/60 text-green-300 border border-green-700/40",
@@ -56,9 +105,12 @@ interface TaskItemProps {
 }
 
 export const TaskItem = ({ task }: TaskItemProps) => {
-  const { markAsCompleted, deleteTask, undoTask, updateTaskRich, retryTask } = useTasksStore();
-  const { toggleTaskSelect, selectedTasks, openTaskModal, showNotification, categories } = useUIStore();
+  const { markAsCompleted, deleteTask, undoTask, updateTaskRich, retryTask, deleteHabitInstances } = useTasksStore();
+  const { toggleTaskSelect, selectedTasks, openTaskModal, openHabitModal, showNotification, categories } = useUIStore();
   const { user } = useAuthStore();
+
+  // Habit delete dialog state
+  const [habitDeleteOpen, setHabitDeleteOpen] = useState(false);
 
   // Resolve category badge class from live category list
   const getCategoryBadge = (categoryName: string) => {
@@ -90,13 +142,32 @@ export const TaskItem = ({ task }: TaskItemProps) => {
         setCompleteAnim("done");
         await markAsCompleted(task.id, user?.id);
         showNotification("Task completed!", "success");
+        // For habit instances the item stays in the list — reset the animation
+        // so the completed state (strikethrough, dimmed) renders correctly
+        if (task.isHabit) {
+          setTimeout(() => setCompleteAnim("idle"), 400);
+        }
       }, 500);
     }
   }, [isCompleted, task.id, user?.id, markAsCompleted, undoTask, showNotification]);
 
   const handleDelete = async () => {
+    if (task.isHabit) {
+      setHabitDeleteOpen(true);
+      return;
+    }
     await deleteTask(task.id, user?.id);
     showNotification("Task deleted", "warning");
+  };
+
+  const handleHabitDeleteConfirm = async (mode: 'this' | 'future' | 'all') => {
+    setHabitDeleteOpen(false);
+    const habitId = task.templateId ?? task.id;
+    await deleteHabitInstances(habitId, mode, task.id, task.dueDate, user?.id);
+    showNotification(
+      mode === 'this' ? 'Habit occurrence deleted' : mode === 'future' ? 'This and future occurrences deleted' : 'Entire habit deleted',
+      'warning',
+    );
   };
 
   // Toggle a subtask's completed state inline (no modal needed)
@@ -108,8 +179,15 @@ export const TaskItem = ({ task }: TaskItemProps) => {
   };
 
   return (
+    <>
+    {habitDeleteOpen && (
+      <HabitDeleteDialog
+        onClose={() => setHabitDeleteOpen(false)}
+        onConfirm={handleHabitDeleteConfirm}
+      />
+    )}
     <div
-      onDoubleClick={() => openTaskModal(task)}
+      onDoubleClick={() => task.isHabit ? openHabitModal(task) : openTaskModal(task)}
       style={{
         // Fade-out when marking complete
         opacity: completeAnim === "done" ? 0 : 1,
@@ -188,6 +266,13 @@ export const TaskItem = ({ task }: TaskItemProps) => {
 
         {/* Badges row */}
         <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {/* Habit badge */}
+          {task.isHabit && (
+            <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-emerald-900/60 text-emerald-300 border border-emerald-700/40">
+              🔁 Habit
+            </span>
+          )}
+
           {/* Priority */}
           {task.priority && (
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${PRIORITY_BADGE[task.priority] ?? ""}`}>
@@ -294,10 +379,10 @@ export const TaskItem = ({ task }: TaskItemProps) => {
       </div>
 
       {/* Right-side action bar — always visible on hover, complete btn included */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
         {/* Edit */}
         <button
-          onClick={(e) => { e.stopPropagation(); openTaskModal(task); }}
+          onClick={(e) => { e.stopPropagation(); task.isHabit ? openHabitModal(task) : openTaskModal(task); }}
           className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Edit task"
         >
@@ -347,6 +432,7 @@ export const TaskItem = ({ task }: TaskItemProps) => {
         </button>
       </div>
     </div>
+    </>
   );
 };
 

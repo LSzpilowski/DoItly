@@ -2,7 +2,7 @@
 
 export type Priority = 'low' | 'medium' | 'high';
 export type Repeat = 'none' | 'daily' | 'weekly' | 'monthly';
-export type View = 'all' | 'today' | 'completed' | 'category' | 'planDay' | 'planWeek' | 'planMonth' | 'thisWeek' | 'overdue';
+export type View = 'all' | 'today' | 'completed' | 'category' | 'planDay' | 'planWeek' | 'planMonth' | 'thisWeek' | 'overdue' | 'habits';
 export type SortField = 'created' | 'dueDate' | 'priority' | 'title';
 export type SortDir = 'asc' | 'desc';
 
@@ -30,7 +30,12 @@ export interface AppSettings {
 export type TaskFormState = {
   title: string;
   description: string;
+  /** Per-task due date — used when repeat === 'none' */
   dueDate: string;
+  /** First occurrence / cycle start — required when repeat !== 'none' */
+  startDate: string;
+  /** Last occurrence / cycle end — optional (empty = infinite) — only for repeat tasks */
+  repeatEndDate: string;
   priority: Priority;
   workspace: string;
   category: string;
@@ -42,6 +47,7 @@ export type TaskFormState = {
 
 export interface ModalState {
   task: boolean;
+  habit: boolean;
   search: boolean;
   focus: boolean;
   settings: boolean;
